@@ -2,12 +2,14 @@ undef("melt_layer_height_nclf")
 function melt_layer_height_nclf(tair,zmodel)
  begin
   ;tair       ;vertical profile of air temperature in K
-  ;zmodel     ;model main level height
-  ;zmelt      ;melting layer height in m
+  ;zmodel     ;model main level height (km)
+  ;zmelt      ;melting layer height in  (km)
   
 
   vart        = tair - 273.15   ;
-  index       = closest_val(0.0,vart)
+  ;does not work for non-monotonic arrays
+  ;index       = closest_val(0.0,vart)
+  index = ind(abs(vart).eq.min(abs(vart)))
   if (vart(index).eq.0) then
     zmelt = zmodel(index)
   else
@@ -24,7 +26,7 @@ function melt_layer_height_nclf(tair,zmodel)
     zmelt = zmxo(iz/2)
    ;print(zm1d + " " + tair1d )
  end if
- print("Melting layer near :" + zmodel(index) + " Tair =" + vart(index))
+ print("Melting layer near :" + zmodel(index) + " km  Tair =" + vart(index))
  print("Interpolated height :" + zmelt)
  return(zmelt)
 end

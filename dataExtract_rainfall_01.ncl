@@ -25,24 +25,25 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-
+ ;do inst = 0,19
  ;;MODEL OUTPUT
- diri        = "/p/project/chbn33/hbn331/" ;"/p/scratch/chbn33/hbn331/"
- event       = "runE_" + inst + "_"
- case        = "HET2483"
+ ;itype_gscp  = "HET2463"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705XXX"
+ subevent    = "runE_" + inst + "_" + itype_gscp
 
- diri_cos    = diri + event + case + "/cosout/"
- diri_cosI   = diri + event + case + "/cosout/ivr/"
+ diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/add/"
+ diri_cosI   = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
 
  inset       = False
+ fplot       = True
+ plotRADOLAN = False ;True ;False 
  
  ;Bonn Radar
- glon_id = (/7.071663, 7.00/) ;
- glat_id = (/50.73052, 50.6/) ;
+ glon_id = (/7.071663/) ;, 7.098308/) ;
+ glat_id = (/50.73052/) ;, 50.737497/) ;
  gmarker = (/10,9/)
  varname = "TOT_PREC" ; 
- varminmax = (/0, 30, 5/) 
-
+ cnLevels = (/1,5,10,15,20,25,30,40,50,60/)
 ;-----------------------------------------------------------------------------------------
 ; SELECT FILES and EXTENTS for Plots 
 ;-----------------------------------------------------------------------------------------
@@ -76,8 +77,7 @@ begin
  nf_cos   = dimsizes(fils_cos)
 
 ;Read specified variables
-; nf_ctr = dimsizes(filindex) 
- nf_ctr  =nf_cos
+ nf_ctr = dimsizes(filindex) 
  varout = new((/nf_ctr, ndimc(0),ndimc(1)/),float)
  str_time = new(nf_ctr, "string")
  xtime    = new(nf_ctr,"float")
@@ -93,11 +93,11 @@ begin
   ix(ii) = nm(ii,1)
  end do
 ;
- do fnctr = nf_ctr-2, nf_ctr-1   ;;BIG LOOP OVER FILES 
+ do fnctr = 1, nf_ctr-1   ;;BIG LOOP OVER FILES 
    
-   fn = fnctr ;filindex(fnctr)
+   fn = filindex(fnctr)
    nc_cos = addfile(fils_cos(fn),"r")
-   print(" " + fils_cos(fn))
+   ;print(" " + fils_cos(fn))
    time     = nc_cos->time
    dtime = calendar_decode2(time,-5)
    year  = dtime(0,0)
@@ -117,14 +117,49 @@ begin
    varout(fnctr,:,:)  = (nc_cos->$varname$(0,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1))
 
 ;-----------------------------------------------------------------------------------------
+; MAIN PLOT SPECIFIC RESOURCES
+;-----------------------------------------------------------------------------------------
+ pvarout = varout(fnctr,:,:)
+
+ print(min(pvarout@lat2d) + " " + max(pvarout@lat2d) + " " + min(pvarout@lon2d) + " " + max(pvarout@lon2d))
+
+ pvarout = where(pvarout.gt.0.1,pvarout,pvarout@_FillValue)
+
+ foutname = "accprecip_" + itype_gscp + "_" + inst + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->ACCRAIN = pvarout
+
+ system("rm georain.nc")
+ fout = addfile("georain.nc","c")
+ fout->topo  = topo
+ fout->lat2d = lat2d
+ fout->lon2d = lon2d
+
+ if (plotRADOLAN) then
+   foutname = "./data/accprecip_RADOLAN_0.nc"
+   fout = addfile(foutname,"r")
+   pvarout = (/fout->ACCRAIN/)
+   pvarout@lat2d = lat2d
+   pvarout@lon2d = lon2d
+ end if
+
+ print("Min : " + min(pvarout) + " Max : " + max(pvarout) + " Avg : " + avg(pvarout) )
+
+ if (fplot) then
+;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
- fname_out = "Figure_rain_"+case + "_"+sprinti("%0.2i",inst)
+ if (plotRADOLAN) then
+   fname_out = "Figure_rain_RADOLAN"
+ else
+   fname_out = "Figure_rain_"+ itype_gscp + "_"+sprinti("%0.2i",inst)
+ end if
  fncps_no = ":F21:"
  fncps_no = 21
  fncps_hgt = 0.028
 
- wks_type                 = "png"
+ wks_type                 = "x11"
  wks = gsn_open_wks(wks_type,fname_out)
  gsn_define_colormap(wks,"precip2_17lev")
 
@@ -134,6 +169,7 @@ begin
  res                            = True                 ; plot mods desired
  res@gsnDraw                    = False
  res@gsnFrame                   = False
+ ;res@gsnSpreadColor             = True
  restopo                        = res
 
  ;tm Resources
@@ -199,17 +235,10 @@ begin
  res@cnLinesOn                  = False 
  res@cnInfoLabelOn              = False   ; Turn off annotations
  res@cnLineLabelsOn             = False
-;-----------------------------------------------------------------------------------------
-; MAIN PLOT SPECIFIC RESOURCES 
-;-----------------------------------------------------------------------------------------
- pvarout = varout(fnctr,:,:)
- 
- pvarout = where(pvarout.ne.0.0,pvarout,pvarout@_FillValue)
 
- print("Min : " + min(pvarout) + " Max : " + max(pvarout))
  res@gsnRightString             = " mm"
  res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   = ispan(varminmax(0),varminmax(1),varminmax(2))
+ res@cnLevels                   = cnLevels
 
 
  plot(0)                         = gsn_csm_contour_map(wks, pvarout, res)
@@ -256,8 +285,8 @@ begin
 
  xyres@trXMinF = 0.
  xyres@trXMaxF = 24.
- xyres@trYMinF = varminmax(0) ; 0; -50.
- xyres@trYMaxF = varminmax(1) ;100. ;400.
+ xyres@trYMinF = min(cnLevels) ;(0) ; 0; -50.
+ xyres@trYMaxF = max(cnLevels) ;
  xyres@tiYAxisString = " "
  xyres@tiXAxisString = ""
 
@@ -278,13 +307,27 @@ begin
 
  end if
 
+ ;Bonn Radar Extent
+;-----------------------------------------------------------------------
+ ncirc    = 100
+ circ_lat = new(ncirc,float)               ; Create arrays to hold circle.
+ circ_lon = new(ncirc,float)
+ raddeg   = 0.91/2. ;
+ nggcog(glat_id(0),glon_id(0),raddeg,circ_lat,circ_lon)
+
+ ;print(circ_lat + " " + circ_lon)
+ lnres                  = True
+ lnres@gsLineColor      = "Brown"
+ lnres@gsLineThicknessF = 6.0
+ line_id = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
+
  draw(plot)
  frame(wks)
+
  delete(restopo)
  delete(res)
+ end if     ; fplot
  end do     ;;BIG LOOP OVER FILES
 
- system("rm precip.nc")
- fout = addfile("precip.nc","c")
- fout->PRECIP=varout
+ ;end do
 end

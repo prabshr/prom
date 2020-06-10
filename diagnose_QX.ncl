@@ -28,13 +28,12 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;opt         = 0  ; [0 - zero moment, 1- first moment]
- diri        = "/p/scratch/chbn33/hbn331"
- event       = "bonnRadar_2014111500"
- case        = "graupelhail2test4"
- subevent    = "HET2473"
+ diri        = "/p/project/chbn33/hbn331/" ;"/p/scratch/chbn33/hbn331/"
+ event       = "runE_" + inst + "_"
+ case        = "HET2483"
 
- diri_cos    = diri + "/" + event + "/" + case + "/" + subevent + "/cosout/"
- diri_cosI   = diri + "/" + event + "/" + case + "/" + subevent + "/ivr/"
+ diri_cos    = diri + event + case + "/cosout/"
+ diri_cosI   = diri + event + case + "/cosout/ivr/"
 
  ;
  hydro_colors = (/"green","blue","skyblue","purple","black","orange"/)
@@ -93,8 +92,8 @@ else if (opt.eq.2) then
  hsurf = nc_cosI->HSURF(0,:,:)
 
  nm = getind_latlon2d (lat,lon, glat_id(gloc), glon_id(gloc))
- iy = nm(0,0)
- ix = nm(0,1)
+ iy = 114 ; nm(0,0)
+ ix = 164 ; nm(0,1)
  print(glat_id + " " + glon_id)
  print(iy + " " + ix)
  
@@ -113,7 +112,7 @@ else if (opt.eq.2) then
 ; nf_ctr = dimsizes(filindex) 
  nf_ctr = dimsizes(fils_cos)
 ;
- do fnctr = 0,nf_ctr-1   ;;BIG LOOP OVER FILES 
+ do fnctr = 100,nf_ctr-1   ;;BIG LOOP OVER FILES 
    
    fn = fnctr ;filindex(fnctr)
    nc_cos = addfile(fils_cos(fn),"r")
@@ -124,6 +123,7 @@ else if (opt.eq.2) then
 ;------------------------------------------------------------------------------
 ;;Prognostic state variables
 ;------------------------------------------------------------------------------
+
    tair             = nc_cos->T(0,::-1,iy,ix)     ;K
    if (opt.ne.2) then
      pressure         = nc_cos->P(0,::-1,iy,ix)     ;Pa
