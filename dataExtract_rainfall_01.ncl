@@ -25,18 +25,22 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- ;do inst = 0,19
+ ;expid= 1,2,3   ;for RADOLAN
+ do inst = 8,8 ;0,19
  ;;MODEL OUTPUT
- ;itype_gscp  = "HET2463"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705XXX"
+ itype_gscp  = "HET2483"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
+
  subevent    = "runE_" + inst + "_" + itype_gscp
 
  diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/add/"
  diri_cosI   = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
 
  inset       = False
- fplot       = True
- plotRADOLAN = False ;True ;False 
+ fplot       = False ;True
+ plotRADOLAN = True ;False 
  
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -137,7 +141,7 @@ begin
  fout->lon2d = lon2d
 
  if (plotRADOLAN) then
-   foutname = "./data/accprecip_RADOLAN_0.nc"
+   foutname = "/daten01/z4/database/radola/accprecip_prom"+expid+"_RADOLAN_0.nc"
    fout = addfile(foutname,"r")
    pvarout = (/fout->ACCRAIN/)
    pvarout@lat2d = lat2d
@@ -329,5 +333,5 @@ begin
  end if     ; fplot
  end do     ;;BIG LOOP OVER FILES
 
- ;end do
+ end do
 end

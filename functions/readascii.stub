@@ -1,0 +1,8 @@
+C NCLFORTSTART
+      subroutine readascii(nx,ny,nz,avar,ncols,scol,fname)
+      CHARACTER*(*)   fname, header
+      INTEGER nx,ny,nz,ncols,scol
+      REAL avar(nx,ny,nz,ncols)
+      INTEGER i,j,k,iunit,ie,je,ke,nc
+      REAL   nvar(ncols)
+C NCLEND

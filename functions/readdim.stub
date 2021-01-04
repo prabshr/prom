@@ -1,0 +1,6 @@
+C NCLFORTSTART
+      subroutine readdim(nx,ny,nz,fname)
+      CHARACTER*(*)   fname, header
+      INTEGER nx,ny,nz
+      INTEGER iunit
+C NCLEND

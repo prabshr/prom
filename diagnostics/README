@@ -1,0 +1,14 @@
+Log: P. Shrestha, Nov. 18 2020
+-------------------------------
+Model has vertically stretched grids. So, it requires interpolation to plot PPI
+or RHI of synthetic polarimetric variables. This may introduce additionaly uncertainty
+in diagnosing the polarimetric singatures. So, to avoid any interpolation of polarimetric moments, it would be desirable to plot the variables in their native co-ordinates.
+
+ppi_model.ncl   -> Shows the variability in spatial pattern dz and height at different
+                   half-levels.
+rhi_model.ncl   -> Shows the variability in dz and height at different half-levels when
+                   plotting c-s.
+
+compare_ppi_model.ncl --> Compares synthetic polarimetric variables between model level data and interpolated data for average
+                          model mass point height in that model level (a.m.s.l)
+

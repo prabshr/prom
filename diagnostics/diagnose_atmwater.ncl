@@ -4,27 +4,24 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$TPS/functions/calcrho_cos_nclf.ncl"
 
-;Computes IWV for first file in diri_cos (nf=0)
+;Computes Precipitatble Water, LWP and IWP
 
 begin
 
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- ctr = 0  ;
- do inst=0,19
- ;;MODEL OUTPUT
- itype_gscp  = "HET2483"
+ itype_gscp  = "HET" + gscp
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
+ diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
  subevent    = "runE_" + inst + "_" + itype_gscp
 
  diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
 ;
  pressure    = (/500.,700./) ; hPa for wind vectors
- cnLevels    = ispan(20,50,2)*1.0
- nf          = 0
-
+ fplot       = False
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -67,31 +64,57 @@ begin
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  nf_cos    = dimsizes(fils_cos)
 
+ do nf   = 0, nf_cos - 1
+
+ if (nf.eq.0) then
+   ;Initialize variables
+   iwv           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
+   iwv@lat2d     = lat2d
+   iwv@lon2d     = lon2d
+   iwv@long_name = "Precipitable Water"   ;or water vapor
+   iwv@units     = "mm"
+
+   lwp           = iwv
+   lwp@long_name = "Liquid Water Path"
+
+   iwp           = iwv
+   iwp@long_name = "Ice Water Path" 
+   lwp       = 0.
+   iwp       = 0.
+   iwv       = 0.
+ end if
+
  filC    = addfile(fils_cos(nf),"r")
  qv      = filC->QV(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  t       = filC->T (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  p       = filC->P (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qc      = filC->QC(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qr      = filC->QR(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ qi      = filC->QI(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qs      = filC->QS(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qg      = filC->QG(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ qh      = filC->QH(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  u       = filC->U (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  v       = filC->V (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
 
-
- qrs     = qr + qs + qg 
- rhoa    = calcrho_cos_nclf(t,p,qv,qc,qrs)   ;kg/m3
-
- iwv     = new((/ndimc(1),ndimc(2)/),"float")
- iwv@lat2d = lat2d
- iwv@lon2d = lon2d
- iwv@long_name = "Precipitable Water"
- iwv@units     = "mm"
- iwv     = 0.
+ qliq    = qc + qr
+ qice    = qi + qs + qg + qh
+ qrs     = qliq + qice
+ rhoa    = calcrho_cos_nclf(t,p,qv,qc,qrs)   ;air density kg/m3
 
  do iz = 0, ndimc(0)-2
-   iwv = iwv + rhoa(iz,:,:)*qv(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
+   iwv(nf,:,:) = iwv(nf,:,:) + rhoa(iz,:,:)*qv  (iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
+   lwp(nf,:,:) = lwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
+   iwp(nf,:,:) = iwp(nf,:,:) + rhoa(iz,:,:)*qice(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
  end do
+
+ print("Processing " + nf + "..." )
+
+ if (fplot) then
+
+ ;-----------------------------------------------------------------------------------------
+ ; PLOT
+ ;-----------------------------------------------------------------------------------------
 
  p    = p*0.01 ;hPa
  z_p  = wrf_user_intrp3d(zmodel,p,"h",pressure(0),0.,False)
@@ -103,30 +126,6 @@ begin
  v_p@lon2d = lon2d
  z_p@lat2d = lat2d
  z_p@lon2d = lon2d
-
- foutname = "debug_IWV.nc"
- system("rm " + foutname)
- fout = addfile(foutname,"c")
- fout->IWV = iwv
- fout->U700 = u_p
- fout->V700 = v_p
-
- if (ctr.eq.0) then
-   piwv = iwv
-   ctr = ctr + 1
- else
-   piwv = piwv + iwv
-   ctr = ctr + 1
- end if
- 
- if (ctr.eq.5) then
-   piwv = piwv/5.
-   print("IWV : " + avg(piwv) + " " + stddev(piwv) + " U : "  + avg(u_p) + " V : " + avg(v_p))
-   ctr = 0
- end if
-;-----------------------------------------------------------------------------------------
-; PLOT
-;-----------------------------------------------------------------------------------------
 
  fncps_no = 21
  fncps_hgt = 0.028
@@ -275,5 +274,16 @@ begin
  draw(plot)
  frame(wks)
  delete([/res,restopo/])
+
+ end if
+
  end do
+
+ fname = "intStat_" + itype_gscp + "_" + inst + ".nc"
+ system("rm " + fname)
+ fout = addfile(fname,"c")
+ fout->IWV = iwv
+ fout->LWP = lwp
+ fout->IWP = iwp
+
 end

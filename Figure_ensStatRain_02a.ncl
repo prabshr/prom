@@ -1,9 +1,13 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl" 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl" 
+
+; First use dataExtract_rainfall_01.ncl to extract data
 begin
 
- lcov       = "CASE I :  20150704 0300 - 20150706 0000"
+ prom = "prom" + expid
+
+ ;lcov       = "CASE I :  20150704 0300 - 20150706 0000"
 ; itype_gscp = (/"HET2483","HET2563","HET2683","TGR2483","TGR2563","RADOLAN"/)
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
 ; itype_gscp = (/"HET2483","TGR2483","CUR2483","RADOLAN"/)
@@ -11,7 +15,7 @@ begin
  itype_gscp = (/"HET2483","RADOLAN"/)
  nes        = 0 
  nee        = 19 
- fenscolor  = True ;False
+ fenscolor  = False
 
  ;PDF parameters
  nbin         = 20
@@ -26,7 +30,8 @@ begin
 
  plot         = new(2,"graphic")
 
- wks          = gsn_open_wks("x11","histo")
+ fnameout     = "Figure_histo_" + expid
+ wks          = gsn_open_wks("png",fnameout)
  res          = True
 
 ;gsn Resources
@@ -96,7 +101,7 @@ begin
    end if
 
    do nf  = nes,nee ;0, nens-1                   ;EPS Loop
-     filname    = "data/accprecip_" + itype_gscp(ityp) + "_" + nf + ".nc"
+     filname    = "data_" + prom + "/accprecip_" + itype_gscp(ityp) + "_" + nf + ".nc"
      fout       = addfile(filname,"r")
      pvar       = fout->ACCRAIN
      pvar1d     = pdfx(ndtooned(pvar),nbin,opt) 

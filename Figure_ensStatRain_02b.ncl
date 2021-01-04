@@ -29,8 +29,10 @@ begin
  inset       = False
  nfils       = 19
  plotRADOLAN = True ;False
+ diriR       = "/daten01/z4/database/radola/"  ;RADOLAN data
  fstat       = 1
- diri        = "data/accprecip_HET2483"
+ diri        = "./data_prom" + expid
+ prefx       = "accprecip_HET2483"
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -46,10 +48,10 @@ begin
  end if
 
  do nf  = 0, nfils-1                   ;EPS Loop
-   fname      = diri + "_"+nf+".nc"
+   fname      = diri + "/" + prefx+ "_"+nf+".nc"
    fout       = addfile(fname,"r")
    if (nf.eq.0) then
-     fgeo       = addfile("data/georain.nc","r")
+     fgeo       = addfile(diri + "/georain.nc","r")
      topo       = (/fgeo->topo/)
      lat2d      = fgeo->lat2d
      lon2d      = fgeo->lon2d
@@ -68,7 +70,7 @@ begin
  print(avg(pvar2d) + " " + stddev(pvar2d) )
 
  if (plotRADOLAN) then
-   foutname = "./data/accprecip_RADOLAN_0.nc"
+   foutname = diriR +  "/accprecip_prom"+expid +"_RADOLAN_0.nc"
    fout = addfile(foutname,"r")
    pvar1 = (/fout->ACCRAIN/)
    pvar1@lat2d = lat2d
@@ -99,12 +101,12 @@ begin
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
  ;fname_out = "Figure_rain_"+ itype_gscp + "_" + fstat 
- fname_out = "rain_ensemble_" + fstat
+ fname_out = "rain_ensemble_" + fstat + "_" + expid
  fncps_no = ":F21:"
  fncps_no = 21
  fncps_hgt = 0.02 ;8
 
- wks_type                 = "x11"
+ wks_type                 = "png"
  wks = gsn_open_wks(wks_type,fname_out)
  if (fstat.eq.1) then
    gsn_define_colormap(wks,"precip2_17lev")
@@ -198,7 +200,7 @@ begin
  res@lbLabelBarOn = False
  plot(0)                         = gsn_csm_contour_map(wks, pvar, res)
 
- res@vpXF       = 0.6
+ res@vpXF       = 0.56
  res@tmYLOn     = False
  res@lbLabelBarOn = True
  plot(1)                         = gsn_csm_contour_map(wks, pvar1, res)
@@ -226,8 +228,8 @@ begin
  restopo@gsnRightString         = ""
  dumtopo                        = gsn_csm_contour(wks,topo, restopo)
  dumtopo1                        = gsn_csm_contour(wks,topo, restopo)
- overlay(plot(0),dumtopo)
- overlay(plot(1),dumtopo1)
+; overlay(plot(0),dumtopo)
+; overlay(plot(1),dumtopo1)
 
  txres                       = True
  txres@gsMarkerSizeF = 12
@@ -276,15 +278,15 @@ begin
  ncirc    = 100
  circ_lat = new(ncirc,float)               ; Create arrays to hold circle.
  circ_lon = new(ncirc,float)
- raddeg   = 0.91/2. ;
+ raddeg   = 0.91 ;
  nggcog(glat_id(0),glon_id(0),raddeg,circ_lat,circ_lon)
 
  ;print(circ_lat + " " + circ_lon)
  lnres                  = True
  lnres@gsLineColor      = "Brown"
  lnres@gsLineThicknessF = 6.0
- line_id = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
- line_id1 = gsn_add_polyline(wks, plot(1), circ_lon, circ_lat, lnres)
+ ;line_id = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
+ ;line_id1 = gsn_add_polyline(wks, plot(1), circ_lon, circ_lat, lnres)
 
 
  draw(plot)

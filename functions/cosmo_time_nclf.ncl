@@ -1,6 +1,6 @@
 undef("cosmo_time_nclf")
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/calendar_decode2.ncl"
-function cosmo_time_nclf(time)
+function cosmo_time_nclf(time,topt)
 begin
  dtime = calendar_decode2(time,-5)
  year  = dtime(0,0)
@@ -17,7 +17,16 @@ begin
 ;
  str_time  = sprinti("%0.4i",year) + "-" + sprinti("%0.2i",month) + \
               "-" + sprinti("%0.2i",day) + " " + sprinti("%0.2i",hh) + \
+               sprinti("%0.2i",mm) + " UTC" ;sprinti("%0.2i",ss) +  " UTC"
+
+ if (topt.eq.0) then
+ str_time  = sprinti("%0.4i",year) + "-" + sprinti("%0.2i",month) + \
+              "-" + sprinti("%0.2i",day) + " " + sprinti("%0.2i",hh) + \
                sprinti("%0.2i",mm) ;+ " UTC" ;sprinti("%0.2i",ss) +  " UTC"
+ else
+ str_time  = sprinti("%0.2i",hh) + \
+               sprinti("%0.2i",mm) + " UTC"
+ end if 
 
  return(str_time)
 end

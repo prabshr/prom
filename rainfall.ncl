@@ -28,11 +28,12 @@ begin
 
  ;;MODEL OUTPUT
  diri        = "/p/project/chbn33/hbn331/" ;"/p/scratch/chbn33/hbn331/"
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705/"
  event       = "runE_" + inst + "_"
  case        = "HET2483"
 
- diri_cos    = diri + event + case + "/cosout/"
- diri_cosI   = diri + event + case + "/cosout/ivr/"
+ diri_cos    = diri + "/" + case + "/" + event + case + "/cosout/"
+ diri_cosI   = diri + "/" + case + "/" + event + case + "/cosout/ivr/"
 
  inset       = False
  
