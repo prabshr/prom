@@ -1,0 +1,21 @@
+#!/bin/csh
+set os=`uname`
+foreach filename (`ls *.f90`)
+ set fname=$filename:r
+
+ if ($os == Linux) then
+   echo $os
+   echo " "
+   echo "WRAPIT " $fname".stub" $fname".f90"
+   WRAPIT $fname".stub" $fname".f90"
+ else if ($os == Darwin) then
+   echo $os
+   echo " " 
+   echo "WRAPIT -l gfortran -L /usr/local/lib " $fname".stub" $fname".f90"
+   WRAPIT -l gfortran -L /usr/local/lib $fname".stub" $fname".f90"
+ else
+   echo "Add code for your machine ..."
+   exit 1
+ endif
+end
+

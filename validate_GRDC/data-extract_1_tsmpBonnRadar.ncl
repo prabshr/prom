@@ -15,7 +15,8 @@ begin
  fplot_root        = False
  diri_db           = "/p/project/chbn33/hbn331/database/bonnRadar/"
  diri_op           = "/p/largedata/hbn33/shrestha1/EA_PROM" + expt +"/HET2483/runE_" + inst + "_HET2483/"
-
+ diri_db           = "/daten/daten04/pshrestha/shared-data/bonnRadar/" 
+ diri_op           = "/daten/daten04/pshrestha/shared-data/bonnRadar_20160513/HET2483/runE_" + inst + "_HET2483/"
  ;expt
  ;year              = 2015;
  ;inst
@@ -229,9 +230,9 @@ begin
 ;Debug Output
 ;-----------------------------------
  foutnc = "debugTSMP_" + year + "_" + inst + ".nc"
- if (fileexists(foutnc)) then
+ ;if (fileexists(foutnc)) then
    system("rm " + foutnc)
- end if
+ ;end if
  fout = addfile(foutnc,"c")
 ;
  fout->lat2d = lat2d

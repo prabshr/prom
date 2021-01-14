@@ -8,7 +8,7 @@
  CHARACTER(len=250)                 :: header
  INTEGER(KIND=4)                    :: i,j,k,iunit,ie,je,ke,nc
  REAL                               :: nvar(ncols)
-! 
+ INTEGER :: ctr 
 ! 
  iunit = 100
 
@@ -18,6 +18,7 @@
  READ (iunit, '(A)') header
  READ (iunit, *) ie, je, ke 
 
+ ctr = 2
  !read whole array READ (iunit, *) avar 
  DO k=1,nz
    DO j=1,ny
@@ -25,7 +26,10 @@
        IF (ncols == 1) THEN
          READ(iunit,*) avar(i,j,k,ncols)
        ELSEIF (ncols == 8) THEN
-         READ(iunit,*) (nvar(nc),nc=1,ncols)
+        ctr = ctr + 1
+        !WRITE(*,*)  k, j, i , ctr
+        READ(iunit,*) (nvar(nc),nc=1,ncols)
+        !WRITE(*,*)  "READ" , nvar
          avar(i,j,k,:) = nvar !;(scol)
        ELSE
          WRITE(*,*) "CODE NOT WRITTEN FOR ncols=",ncols

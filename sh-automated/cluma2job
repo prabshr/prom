@@ -1,0 +1,16 @@
+#!/bin/bash
+# Called by ensemble_ncl.sh
+#Job Submission to Cluma
+#PBS -N ncl__inst__ 
+#PBS -l walltime=700:00:00
+#PBS -l nodes=1:ppn=1
+#PBS -V 
+#PBS -u pshrestha 
+#PBS -q batch
+
+cd $PROM/scratch
+cp $PROM/diagnostics/diagnose_convfraction.ncl ./diagnose_convfraction__inst__.ncl
+ncl diagnose_convfraction__inst__.ncl inst=__inst__ 
+exit
+
+
