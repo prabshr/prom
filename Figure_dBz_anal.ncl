@@ -34,11 +34,11 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- ;prom=3 
+ prom=1 
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 20 ;0
-   fne      = 20 ;36
+   fns      = 8 ;0
+   fne      = 15 ;36
    dns      = 0  ; offset for dbz files
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
@@ -55,12 +55,12 @@ begin
  end if
 
  itype_gscp  = "HET2483"
- ext         = (/0.45,0.6/)*2.0   ;*1.2
- Ipangles    = (/35.0,145.,170./)   ;consistent with plot_ppi
- ngridmax    = 90  ;110 ;90
+ ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
+ Ipangles    = (/0.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+ ngridmax    = 90*3  ;110 ;90
  ext_pfo     = 90  ;controls extent of c-s
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
- fstrack     = False
+ fstrack     = True ;False
 
  glon_idB    = 7.071663 ; Bonn Radar
  glat_idB    = 50.73052 ;
@@ -73,6 +73,8 @@ begin
  fpressure   = 600. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
+ ;test
+  mpcorner    = (/50.5, 6.9, 51.2, 7.5/)
  
  pv_colors   = (/"green","blue","skyblue","purple","grey40","orange"/)
 
@@ -253,18 +255,18 @@ begin
  eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
  jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
 
-if (fstrack) then
+;;if (fstrack) then
   ji      = region_ind (lat,lon, mpcorner(0),mpcorner(2),mpcorner(1),mpcorner(3))
   ngrid   = ji(1)-ji(0)+1
   print("ny extent : " + ngrid)
-  if (ngrid.ne.ngridmax) then
+  if (ngrid.gt.ngridmax) then
     ji(1) = ji(0) + ngridmax-1 
     ngrid   = ji(1)-ji(0)+1
     print("ny extent reset : " + ngrid)
   end if
   ngrid   = ji(3)-ji(2)+1
   print("nx extent : " + ngrid)
-  if (ngrid.ne.ngridmax) then
+  if (ngrid.gt.ngridmax) then
     ji(3) = ji(2) + ngridmax-1 
     ngrid   = ji(3)-ji(2) + 1
     print("nx extent reset : " + ngrid)
@@ -282,10 +284,10 @@ if (fstrack) then
     print("X-Boundary reached ...")
   end if
  jiv   = (/ji(0)-jinv(0),ji(1)-jinv(0),ji(2)-jinv(2),ji(3)-jinv(2)/)
-else
- ji    = jinv
- jiv   = (/0, eclp(0)-sclp(0)-1, 0, eclp(1)-sclp(1)-1/)
-end if
+;;else
+;; ji    = jinv
+;; jiv   = (/0, eclp(0)-sclp(0)-1, 0, eclp(1)-sclp(1)-1/)
+;;end if
  
   lat_c    = lat(ji(0):ji(1),ji(2):ji(3))
   lon_c    = lon(ji(0):ji(1),ji(2):ji(3))
@@ -365,7 +367,7 @@ end if
     end if
   end do
 ;
-  x_plane               = lon_plane
+  x_plane               = lat_plane
 
   tc_plane!0            = "height"
   tc_plane!1            = "longitude" 
@@ -569,10 +571,10 @@ end if
  ;res@mpCenterLatF                 = 90.0 + lat@Latitude_of_southern_pole         ;lat of centre of map projection system
 
  res@mpLimitMode                  = "Corners"           ; method to zoom
- res@mpLeftCornerLatF             = min(lat_c) ;mpcorner(0) ;28; lat(0,0)
- res@mpLeftCornerLonF             = min(lon_c) ;mpcorner(1) ;76 ;lon(0,0)
- res@mpRightCornerLatF            = max(lat_c) ;mpcorner(2) ;32 ;lat(ndim(0)-1,ndim(1)-1)
- res@mpRightCornerLonF            = max(lon_c) ;mpcorner(3) ;82 ;lon(ndim(0)-1,ndim(1)-1)
+ res@mpLeftCornerLatF             = mpcorner(0) ;28; lat(0,0)
+ res@mpLeftCornerLonF             = mpcorner(1) ;76 ;lon(0,0)
+ res@mpRightCornerLatF            = mpcorner(2) ;32 ;lat(ndim(0)-1,ndim(1)-1)
+ res@mpRightCornerLonF            = mpcorner(3) ;82 ;lon(ndim(0)-1,ndim(1)-1)
  res@mpOutlineOn                  = True
  res@mpOutlineBoundarySets        = "National"
  res@mpDataSetName                = "Earth..4"    ; database for non-USA divisions

@@ -1,5 +1,6 @@
 ;Plot the time-series of convective area fraction for all ensemble members
 ;at specified  model level
+; CAF is the fractional area of storm where the ZH > 40 dBZ
 
 ;P. Shrestha
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
@@ -13,6 +14,7 @@ begin
 ; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/"
 ; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
  diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20170706/Synth/"
+ diri_dBz    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth_track/"
 
  expid        = "HET2483"
  pvars       = (/"Zh","Zdr","KDP","RHV"/)

@@ -13,10 +13,11 @@ external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
 begin
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_8/"
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_6/"
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
- ipol        = 1     ;polarimetric moment to plot
+ finterp     = False
+ ;ipol        = 3     ;polarimetric moment to plot
  ;ix          = 95   ;location for C-S
  fn          = 10;20    ;file to read
 
@@ -88,23 +89,25 @@ begin
  xpoly   = xypoly(0,:)
  ypoly   = xypoly(1,:)
 
- ;Now, interpolate also the variable to average model mass point height
- print("Interpolating " + pvars(ipol) + " data at ix " + ix )
- plane = (/ ix, 0/) 
- spol_ip       = wrf_user_intrp3d(varh(ipol,:,:,:),hgtPV(0,:,:,:),"v",plane,0.,False)  ;N-S c-s at ix
- spol_ip@_FillValue = varh@_FillValue
- ndimz            = dimsizes(spol_ip)
- maxhgt           = max(hgtPV(0,:,:,:))
- minhgt           = min(hgtPV(0,:,:,:))
- spol_ip!0        = "Z"
- spol_ip&Z        = fspan(minhgt,maxhgt,ndimz(0))
- spol_ip!1        = "Y"
- spol_ip&Y        = ispan(1,array(1)-1,1) ; ~km  0 is missing bug in wrf_interp
+
+ if (finterp) then
+
+   ;Now, interpolate also the variable to average model mass point height
+   print("Interpolating " + pvars(ipol) + " data at ix " + ix )
+   plane = (/ ix, 0/) 
+   spol_ip       = wrf_user_intrp3d(varh(ipol,:,:,:),hgtPV(0,:,:,:),"v",plane,0.,False)  ;N-S c-s at ix
+   spol_ip@_FillValue = varh@_FillValue
+   ndimz            = dimsizes(spol_ip)
+   maxhgt           = max(hgtPV(0,:,:,:))
+   minhgt           = min(hgtPV(0,:,:,:))
+   spol_ip!0        = "Z"
+   spol_ip&Z        = fspan(minhgt,maxhgt,ndimz(0))
+   spol_ip!1        = "Y"
+   spol_ip&Y        = ispan(1,array(1)-1,1) ; ~km  0 is missing bug in wrf_interp
+
+ end if
 
  print("Plotting ...")
-
-;Differences
- ;print("RMSD " + rms)
 
  plot     = new(2,"graphic")
  res      = True
@@ -134,10 +137,13 @@ begin
    ipol_levs = ipol_4levs
  end if
 
- res@cnLevels                   =  ipol_levs
+ if (finterp) then
+   res@cnLevels                   =  ipol_levs
 
- res@tiMainString = "Interpolated C-S "
- plot(1)  = gsn_csm_contour(wks,spol_ip,res)
+   res@tiMainString = "Interpolated C-S "
+   plot(1)  = gsn_csm_contour(wks,spol_ip,res)
+
+ end if
 
  ; Trick to linearize the plot
  res@trGridType = "TriangularMesh"
@@ -155,8 +161,11 @@ begin
  dum1 = gsn_add_polyline(wks,plot(0),xpoly(0:sdims(1)-1),ypoly(0:sdims(1)-1),pres)
 
 
-
- gsn_panel(wks,plot,(/1,2/),False)
-
+ if (finterp) then
+   gsn_panel(wks,plot,(/1,2/),False)
+ else
+   draw(plot(0))
+   frame(wks)
+ end if
 
 end

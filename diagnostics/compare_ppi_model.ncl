@@ -12,12 +12,12 @@ external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
 begin
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_8/"
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_" + inst +"/"
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
- ipol        = 1     ;polarimetric moment to plot
- iz          = 45 ;21(low level) ; 47(mid level) , 41? ;model level to plot
- fn          = 15;8;20    ;file to read
+ ipol        = 3     ;polarimetric moment to plot
+ iz          = 44 ;21(low level) ; 47(mid level) , 41? ;model level to plot
+ fn          = 10;8;20    ;file to read
 
  ipol_1levs  = ispan(5,65,5)*1. -10.
  ipol_2levs  = (/-1.,0,0.1,0.2,0.3,0.4,.5,0.6,0.8,1.0,2.,3.0,4./)
@@ -58,7 +58,7 @@ begin
  varPV        = new((/8,array(2),array(1),array(0)/),"float")
  varPV@_FillValue = -99
  fname        = fils_var(fn)
- print(" " + fname)
+ print(fn + " " + fname)
 
  EXT2::readascii(array(0),array(1),array(2),varPV,8,1,fname)
  ;Need to reverse the vertical levels

@@ -4,7 +4,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/calendar_decode2.ncl"
 
-function data_extract(diri,nens)
+function data_extract(diri,nens,nt)
   begin
   do nf = 0, nens-1
     fname  = diri + "/CAF_HET2483_" + nf + ".nc"
@@ -12,7 +12,7 @@ function data_extract(diri,nens)
     if (nf.eq.0) then
        temp = nc_fil->Band1
        ndim = dimsizes(temp)
-       time = ispan(0,ndim-1,1)*5    ;5 minute interval data
+       time = ispan(0,ndim-1,1)*nt    ;5-15 minute interval data
        data  = new((/nens,ndim/),"float")
     end if
     print(" " + nf)
@@ -31,10 +31,16 @@ begin
   nens = 20
 
 ; Read processed data
-  data1 = data_extract(diri1,nens)
-  data2 = data_extract(diri2,nens)
-  data3 = data_extract(diri3,nens)
+  data1 = data_extract(diri1,nens,5)
+  data2 = data_extract(diri2,nens,5)
+  data3 = data_extract(diri3,nens,15)
 
+; Some staistics
+  qStd1= 100.*dim_stddev_n(data1,0)/dim_avg_n(data1,0)
+  qStd2= 100.*dim_stddev_n(data2,0)/dim_avg_n(data1,0)
+  qStd3= 100.*dim_stddev_n(data3,0)/dim_avg_n(data1,0) 
+
+  print(dim_median(qStd1) + " " + dim_median(qStd2) + " " + dim_median(qStd3))
 ;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
@@ -84,10 +90,13 @@ begin
  res@tiYAxisString              = "Convective Area Fraction [-]"
  res@tiXAxisString              = "Time (minutes)" 
 
+ res@trXMaxF = max(data1&time)
  plot(0)                        = gsn_csm_xy (wks,data1&time,data1,res) ; create plot
 
+ res@trXMaxF = max(data2&time)
  plot(1)                        = gsn_csm_xy (wks,data2&time,data2,res)
  
+ res@trXMaxF = max(data3&time)
  plot(2)                        = gsn_csm_xy (wks,data3&time,data3,res)
  resP = True
  resP@gsnPanelFigureStrings = (/"a)","b)","c)"/)

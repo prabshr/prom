@@ -11,4 +11,5 @@ rhi_model.ncl   -> Shows the variability in dz and height at different half-leve
 
 compare_ppi_model.ncl --> Compares synthetic polarimetric variables between model level data and interpolated data for average
                           model mass point height in that model level (a.m.s.l)
+compare_rhi_model.ncl --> Compares synthetic polarimetric variables between model level data and interpolated data
 

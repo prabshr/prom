@@ -19,11 +19,11 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- ;prom=2
+ prom=1
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 20 
-   fne      = 20 ;36
+   fns      = 8 ;10 
+   fne      = 12 ;10 ;36
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
    fns      = 48 ;19
@@ -38,17 +38,17 @@ begin
 
  itype_gscp  = "HET2483"
 
- ext         = (/0.45,0.6/)*2.0 ;3.0   ;*1.2
+ ext         = (/0.45,0.6/)* 1.0 ;2.0 ;3.0   ;*1.2
  ngridmax    = 90*3  ;110 ;90
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
- fstrack     = False
+ fstrack     = True ;False
 
  glon_idB    = 7.071663 ; Bonn Radar
  glat_idB    = 50.73052 ;
  extB        = 0.91     ;extent in degrees
 
- Ipangles    = (/35.0,145.,170./)   ;consistent with plot_ppi
- qprom       = (/3.0, 3.0, 3.0/)    ;max for vertical profile
+ Ipangles    = (/0.,0.,0./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
+ qprom       = (/4.0, 3.0, 3.0/)    ;max for vertical profile
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
  uzmask      = False
@@ -57,6 +57,8 @@ begin
  fpressure   = 600. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
+ ;test
+ mpcorner    = (/50.5, 6.9, 51.2, 7.5/)
  
  hydro_colors     = (/"green","blue","skyblue","purple","grey40","orange"/)
  hydro_dash       = (/0, 0, 1, 1, 1, 1/)
@@ -241,14 +243,14 @@ begin
   ji      = region_ind (lat,lon, mpcorner(0),mpcorner(2),mpcorner(1),mpcorner(3))
   ngrid   = ji(1)-ji(0)+1
   print("ny extent : " + ngrid)
-  if (ngrid.ne.ngridmax) then
+  if (ngrid.gt.ngridmax) then
     ji(1) = ji(0) + ngridmax-1 
     ngrid   = ji(1)-ji(0)+1
     print("ny extent reset : " + ngrid)
   end if
   ngrid   = ji(3)-ji(2)+1
   print("nx extent : " + ngrid)
-  if (ngrid.ne.ngridmax) then
+  if (ngrid.gt.ngridmax) then
     ji(3) = ji(2) + ngridmax-1 
     ngrid   = ji(3)-ji(2) + 1
     print("nx extent reset : " + ngrid)
@@ -345,7 +347,7 @@ begin
     end if
   end do
 ;
-  x_plane               = lon_plane
+  x_plane               = lat_plane ;lon_plane
 
   tc_plane!0            = "height"
   tc_plane!1            = "longitude" 
@@ -503,7 +505,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
