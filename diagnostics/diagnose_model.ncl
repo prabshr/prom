@@ -15,7 +15,7 @@ begin
 ; iz          = 44 ;21(low level) ; 47(mid level) , 41? ;model level to plot
 ; ix          = 90
 ; iy          = 90
- fn         = 10;20    ;file to read
+ ;fn         = 10;20    ;file to read
 
  ;Bonn Radar
  glon_id     = (/7.071663/) ;

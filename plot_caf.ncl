@@ -15,7 +15,7 @@ function data_extract(diri,nens,nt)
        time = ispan(0,ndim-1,1)*nt    ;5-15 minute interval data
        data  = new((/nens,ndim/),"float")
     end if
-    print(" " + nf)
+    ;print(" " + nf)
     data(nf,:) = nc_fil->Band1    ;CAF [-]
   end do
   data!1  = "time"
@@ -30,7 +30,14 @@ begin
   diri3 = "$PROM/scratch/data_prom3/"
   nens = 20
 
-; Read processed data
+; Read observations
+  nc_obs1 = addfile(diri1 + "/CAF_BoXPol_20150705.nc","r")
+  datao1  = nc_obs1->Band1
+  timeo1  = datao1&time
+  timeo1  = (timeo1 - timeo1(0))*60. ;minutes
+  print(timeo1)
+ 
+; Read processed synthetic data
   data1 = data_extract(diri1,nens,5)
   data2 = data_extract(diri2,nens,5)
   data3 = data_extract(diri3,nens,15)
@@ -45,7 +52,7 @@ begin
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
  plot = new(3,"graphic")
- wks_type = "x11"
+ wks_type = "png"
  fname_out = "Figure_caf"
  wks = gsn_open_wks(wks_type,fname_out)
 
@@ -82,16 +89,22 @@ begin
  res@trYMaxF                    = 0.40
 
  res@xyLineThicknessF           = 3.
- res@xyLineColors               = (/"aquamarine4","aquamarine3","aquamarine2","aquamarine1","aquamarine", \
-                                    "dodgerblue4","dodgerblue3","dodgerblue2","dodgerblue1","dodgerblue", \ 
-                                    "goldenrod4", "goldenrod3","goldenrod2","goldenrod1","goldenrod", \
-                                    "gray35", "gray29", "gray19", "gray10", "gray0"/)
+ resd = res
+ res@xyLineColor                = "gray"
+; res@xyLineColors               = (/"aquamarine4","aquamarine3","aquamarine2","aquamarine1","aquamarine", \
+;                                    "dodgerblue4","dodgerblue3","dodgerblue2","dodgerblue1","dodgerblue", \ 
+;                                    "goldenrod4", "goldenrod3","goldenrod2","goldenrod1","goldenrod", \
+;                                    "gray35", "gray29", "gray19", "gray10", "gray0"/)
  res@xyDashPattern              = 0
  res@tiYAxisString              = "Convective Area Fraction [-]"
  res@tiXAxisString              = "Time (minutes)" 
 
  res@trXMaxF = max(data1&time)
  plot(0)                        = gsn_csm_xy (wks,data1&time,data1,res) ; create plot
+
+ resd@xyLineColor               = "red"
+ dum0                           = gsn_csm_xy (wks,timeo1,datao1,resd)
+ overlay(plot(0),dum0)
 
  res@trXMaxF = max(data2&time)
  plot(1)                        = gsn_csm_xy (wks,data2&time,data2,res)
@@ -101,6 +114,23 @@ begin
  resP = True
  resP@gsnPanelFigureStrings = (/"a)","b)","c)"/)
  resP@amJust   = "TopLeft"
+
+;Add legend
+ lgres                    = True
+ lgres@lgLineColors       = (/"red", "gray"/)
+ lgres@lgLineThicknessF   = res@xyLineThicknessF
+ lgres@lgDashIndexes      = (/0,0/)
+ lgres@lgItemType         = "Lines"
+ lgres@lgLabelFontHeightF = 0.28
+ lgres@vpWidthF           = 0.1
+ lgres@vpHeightF          = 0.1
+ lgres@lgPerimOn          = False
+ lbid = gsn_create_legend(wks,2,(/"BoXPol","Model"/),lgres)
+
+ amres = True
+ amres@amParallelPosF   = 0.2
+ amres@amOrthogonalPosF = -0.35
+ annoid1 = gsn_add_annotation(plot(0),lbid,amres)
 
  gsn_panel(wks,plot,(/2,2/),resP)
 

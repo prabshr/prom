@@ -37,8 +37,8 @@ begin
  prom=1 
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 8 ;0
-   fne      = 15 ;36
+   fns      = 21 ; 16 ; 21 ;10
+   fne      = 21 
    dns      = 0  ; offset for dbz files
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
@@ -62,8 +62,8 @@ begin
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
  fstrack     = True ;False
 
- glon_idB    = 7.071663 ; Bonn Radar
- glat_idB    = 50.73052 ;
+ glon_idB    = (/7.071663, 7.489/) ; Bonn Radar
+ glat_idB    = (/50.73052, 50.659/) ;
  extB        = 0.91     ;extent in degrees
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
@@ -72,16 +72,16 @@ begin
  hmax        = 15.0        ;km
  fpressure   = 600. ;350.   ;hPa, for pressure plot
 
- mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
+ mpcorner    = (/glat_idB(0)-ext(0),glon_idB(0)-ext(1),glat_idB(0)+ext(0),glon_idB(0)+ext(1)/)
  ;test
-  mpcorner    = (/50.5, 6.9, 51.2, 7.5/)
+ ; mpcorner    = (/50.5, 6.9, 51.2, 7.5/)
  
  pv_colors   = (/"green","blue","skyblue","purple","grey40","orange"/)
 
- ipol_1levs  = ispan(5,65,5)*1. -10.
- ipol_2levs  = (/-1.,0,0.1,0.2,0.3,0.4,.5,0.6,0.8,1.0,1.2,1.5,2./) 
- ipol_3levs  = (/-0.5,-0.1, 0, 0.05, 0.1, 0.2, 0.3, 0.4,0.6, 0.8, 1.0, 2.0, 3.0/) 
- ipol_4levs  = (/0.8, 0.85, 0.9, 0.92, 0.94, 0.95, 0.96,0.97, 0.98, 0.985, 0.99, 0.995, 1.0/) 
+ zhh_levs = ispan(0,60,5)*1. -10.
+ zdr_levs = (/-1.  ,-0.1 , 0.0,  0.1,  0.2,  0.3,  0.4,  0.5,  0.6,  0.8,  1.0,  2.0,   3.0/)
+ rho_levs = (/ 0.7 , 0.8 , 0.85, 0.90, 0.92, 0.94, 0.95, 0.96, 0.97, 0.98, 0.99, 0.995, 0.998/)
+ kdp_levs = (/-0.50,-0.10, 0.0,  0.05, 0.10, 0.20, 0.30, 0.40, 0.60, 0.80, 1.00, 2.00,  3.00/)
 
  qmin         = tointeger((/-5.,-0.1,-0.5 ,0.8/)*100.)
  qlev         = tointeger((/  5., 0.25, 0.1,0.1/)*100.)
@@ -185,8 +185,8 @@ begin
    mpcornerw  = (/glat_id-wss*wfac*ext(0),glon_id-wss*wfac*ext(1),glat_id+wse*wfac*ext(0),glon_id+wse*wfac*ext(1)/)
 
  else
-   glat_id = glat_idB
-   glon_id = glon_idB
+   glat_id = glat_idB(0)
+   glon_id = glon_idB(0)
  end if
 ;-----------------------------------------------------------------------------------------
 ;#6 DERIVE POLARIMETRIC VARIABLES
@@ -250,7 +250,7 @@ begin
 ;-------------------------------------------------------------------------------
 ;#7 Crop data and vertical plane for interpolation
 ;-------------------------------------------------------------------------------
- nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
+ nm      = getind_latlon2d (lat,lon, glat_idB(1), glon_idB(1))
  sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
  eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
  jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
@@ -299,7 +299,7 @@ begin
 
   ; Obtain the radar line of view
   Ipangle = Ipangles(prom-1)
-  plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_idB,glon_idB,extB,iopt)
+  plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_idB(1),glon_idB(1),extB,iopt)
   glon_p = plane@X
   glat_p = plane@Y
 
@@ -509,12 +509,12 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
   ;gsn_define_colormap(wks,"radar_1")
-  colors = (/"white","black","white","cyan","deepskyblue2","blue", \
+  colors = (/"white","black","cyan","deepskyblue2","blue", \
                             "chartreuse", "chartreuse3", "chartreuse4", \
                             "yellow", "yellow3", "orange", \
                             "orangered","orangered3","orangered4", \
@@ -593,7 +593,7 @@ begin
  res@cnInfoLabelOn              = False   ; Turn off annotations
  res@cnLineLabelsOn             = False
  res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   =  ipol_1levs ;ispan(qmin(0), qmax(0),qlev(0))/100.
+ res@cnLevels                   =  zhh_levs ;ispan(qmin(0), qmax(0),qlev(0))/100.
 
  ;Labels
  res@lbLabelAutoStride          = True
@@ -696,7 +696,7 @@ begin
  dumpl = gsn_add_polyline(wks, plot(0),lon_plane, lat_plane, plres)
 
  plres@gsLineColor             = "red"
- dumxp = gsn_add_polyline(wks, plot(0),(/glon_idB,glon_p/), (/glat_idB,glat_p/), plres)
+ dumxp = gsn_add_polyline(wks, plot(0),(/glon_idB(0),glon_p/), (/glat_idB(0),glat_p/), plres)
 
  txres               = True
  txres@txFont        = fncps_no
@@ -774,19 +774,19 @@ begin
  if (ipol.eq.0) then
    v_plane = v1_plane
    v_v     = v1_v
-   rescs@cnLevels  = ipol_1levs
+   rescs@cnLevels  = zhh_levs
  else if (ipol.eq.1) then
    v_plane = v2_plane
    v_v     = v2_v
-   rescs@cnLevels  = ipol_2levs
+   rescs@cnLevels  = zdr_levs
  else if (ipol.eq.2) then
    v_plane = v3_plane
    v_v     = v3_v
-   rescs@cnLevels  = ipol_3levs
+   rescs@cnLevels  = kdp_levs
  else if (ipol.eq.3) then
    v_plane = v4_plane
    v_v     = v4_v
-   rescs@cnLevels  = ipol_4levs
+   rescs@cnLevels  = rho_levs
  end if
  end if
  end if
@@ -794,7 +794,7 @@ begin
  plot(1)                          = gsn_csm_contour(wks, v_plane, rescs)
  delete(rescs@cnLevels)
 
- rescs@cnLevels                   = ipol_1levs ;ispan(qmin(0),qmax(0),qlev(0))/100.
+ rescs@cnLevels                   = zhh_levs ;ispan(qmin(0),qmax(0),qlev(0))/100.
  rescs@cnLineThicknessF           = 1.0
  rescs@cnFillOn                   = False
  rescs@cnLinesOn                  = True
@@ -902,7 +902,7 @@ begin
  circ_lat = new(ncirc,float)               ; Create arrays to hold circle.
  circ_lon = new(ncirc,float)
  raddeg   = extB ;
- nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
 
  lnres                  = True
  lnres@gsLineColor      = "black"
@@ -911,22 +911,22 @@ begin
  line_id1 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
  raddeg   = extB/2. ;
- nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
 
  line_id2 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
  raddeg   = extB/4. ;
- nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
 
  line_id3 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
 ; Draw cross hair
  dumch = new(2,"graphic")
- ply   = (/glat_idB ,glat_idB/)
+ ply   = (/glat_idB(0) ,glat_idB(0)/)
  plx   = (/min(lon), max(lon)/)
  dumch(0) = gsn_add_polyline(wks, plot(0), plx, ply, lnres)
 
- plx = (/glon_idB ,glon_idB/)
+ plx = (/glon_idB(0) ,glon_idB(0)/)
  ply = (/min(lat), max(lat)/)
  dumch(1) = gsn_add_polyline(wks, plot(0), plx, ply, lnres)
 

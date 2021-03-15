@@ -11,10 +11,10 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- itype_gscp  = "HET" + gscp
+ itype_gscp  = "HET2483"
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
- diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
+; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
+; diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
  subevent    = "runE_" + inst + "_" + itype_gscp
 
  diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/"

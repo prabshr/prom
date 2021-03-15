@@ -16,7 +16,7 @@ external EXT2 "$prom_root/functions/readascii.so"
 begin
  diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/"
  itype_gscp  = "HET2483"
- inst        = 8 
+ inst        = 5 
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
  ipol        =  0     ;polarimetric moment to plot

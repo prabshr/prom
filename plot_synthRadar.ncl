@@ -7,6 +7,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$PROM/functions/shade_terrain.ncl"
+load "$PROM/functions/load_radarColors.ncl"
 external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
@@ -35,18 +36,15 @@ begin
  end if
  if (inst.eq.5) then
     mpc         = (/50. + 30./60., 6. + 45./60. , 51., 7. + 15./60./)
+    mpc         = (/50. + 40./60., 7. + 20./60. , 51.5, 8. + 40./60./)
     ix = 81
+    ix = 121
  end if
 
 
  frhi        = True ;replace 3rd level ppi with rhi
  ;fn          = 15;8;20    ;file to read
 
- ipol_1levs  = ispan(5,65,5)*1. -10. 
- ipol_2levs  = (/-1.,0,0.1,0.2,0.3,0.4,.5,0.6,0.8,1.0,2.,3.0,4./)
- ipol_3levs  = (/-0.5,-0.1, 0, 0.05, 0.1, 0.2, 0.3, 0.4,0.6, 0.8, 1.0, 2.0, 3.0/)
- ipol_4levs  = (/0.8, 0.85, 0.9, 0.92, 0.94, 0.95, 0.96,0.97, 0.98, 0.985, 0.99, 0.995, 1.0/)
- 
 ;;;;;;;;;;
 
  diri_input  = diri_dBz + "/input"
@@ -131,13 +129,10 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_i" + inst + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("x11", "Figure_i" + inst + "_t" + fn + "_ix" + ix)
 
- colors = (/"white","black","white","cyan","deepskyblue2","blue", \
-                            "chartreuse", "chartreuse3", "chartreuse4", \
-                            "yellow", "yellow3", "orange", \
-                            "orangered","orangered3","orangered4", \
-                            "magenta", "mediumpurple"/)
+ colors   = load_radarColors(0)
+
  gsn_define_colormap(wks,colors)
 
  res      = True
@@ -258,7 +253,7 @@ begin
  do ipol = 0, npol-1   
 
    if (ipol.eq.0) then
-     ipol_levs = ipol_1levs
+     ipol_levs = colors@zhh_levs
      res@tmYLLabelsOn = True
      res@gsnRightString = ""
    else
@@ -266,15 +261,15 @@ begin
    end if
 
    if (ipol.eq.1) then
-     ipol_levs = ipol_2levs
+     ipol_levs = colors@zdr_levs
      res@gsnRightString = ""
    end if
    if (ipol.eq.2) then
-     ipol_levs = ipol_3levs
+     ipol_levs = colors@kdp_levs
      res@gsnRightString = ""
    end if
    if (ipol.eq.3) then
-     ipol_levs = ipol_4levs
+     ipol_levs = colors@rho_levs
      res@gsnRightString = avghgt + " m a.g.l."
    end if
 

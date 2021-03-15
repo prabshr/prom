@@ -22,11 +22,12 @@ begin
  prom=1
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 8 ;10 
-   fne      = 12 ;10 ;36
+   fns      = 21; 16 ;21 ; 16 ; 21 ;10 
+   fne      = 21; 16 ;21 ;16 ; 21;10 ;36
+   ixp      = 1  ;which hydrometeor to explore 
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
-   fns      = 48 ;19
+   fns      = 488 ;19
    fne      = 48 ;55
  else if (prom.eq.3) then
    diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
@@ -278,7 +279,7 @@ begin
 
   ; Obtain the radar line of view
   Ipangle = Ipangles(prom-1)
-  plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_idB,glon_idB,extB,iopt)
+  plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
   glon_p = plane@X
   glat_p = plane@Y
 
@@ -301,7 +302,7 @@ begin
   prec_c      = tot_prec(ji(0):ji(1),ji(2):ji(3))
   hail_c      = hail_gsp(ji(0):ji(1),ji(2):ji(3))
 
-  vx_c        = dim_sum_n(varh_c,0)             ;total hydrometeor 
+  vx_c        = varh_c(ixp, :, :,:) ;dim_sum_n(varh_c,0)             ;total hydrometeor 
   ; Set precip to zero for fn=0
   if (fn.eq.fns) then
     prec_c = 0.
@@ -505,7 +506,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -582,7 +583,8 @@ begin
  res@cnInfoLabelOn              = False   ; Turn off annotations
  res@cnLineLabelsOn             = False
  res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   = min(qcnlevs) ;
+ rescs@cnLevels                      = qcnlevs
+; res@cnLevels                   = min(qcnlevs) ;
  res@cnFillColors               = (/"white","slategrey"/)
 
  ;Labels
@@ -763,29 +765,29 @@ begin
  rescs@cnInfoLabelOn              = False   ; Turn off annotations
  rescs@cnLineLabelsOn             = True; False
 
- plot(1)                          = gsn_csm_contour(wks, vr_plane, rescs)
+ plot(1)                          = gsn_csm_contour(wks, vh_plane, rescs)
 
  rescs@cnLineThicknessF           = 2.0
  rescs@cnFillOn                   = False
  rescs@cnLineColor                = hydro_colors(0) 
  dumqp                            = gsn_csm_contour(wks, vc_plane, rescs)
- overlay(plot(1),dumqp)
+ ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(2)
  dumqp                            = gsn_csm_contour(wks, vi_plane, rescs)
- overlay(plot(1),dumqp)
+ ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(3) 
  dumqp                            = gsn_csm_contour(wks, vs_plane, rescs)
- overlay(plot(1),dumqp)
+ ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(4) 
  dumqp                            = gsn_csm_contour(wks, vg_plane, rescs)
- overlay(plot(1),dumqp)
+ ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(5) 
  dumqp                            = gsn_csm_contour(wks, vh_plane, rescs)
- overlay(plot(1),dumqp)
+ ;overlay(plot(1),dumqp)
 
  ;;Vector overlay along the cross-section
  rescsv@vcRefAnnoFontHeightF     = 0.02
