@@ -20,8 +20,8 @@ begin
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
  ipol        =  0     ;polarimetric moment to plot
-; iz          = 21 ;21(low level) ; 47(mid level) , 41? ;model level to plot
-; ix         = 95   ;location for C-S
+ iz          = 21 ;21(low level) ; 47(mid level) , 41? ;model level to plot
+ ix         = 95   ;location for C-S
  fn          = 10;20    ;file to read
 
  ipol_1levs  = ispan(5,65,5)*1. -10.

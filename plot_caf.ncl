@@ -4,7 +4,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/calendar_decode2.ncl"
 
-function data_extract(diri,nens,nt)
+function data_extract(diri,nens,st,nt)
   begin
   do nf = 0, nens-1
     fname  = diri + "/CAF_HET2483_" + nf + ".nc"
@@ -12,12 +12,13 @@ function data_extract(diri,nens,nt)
     if (nf.eq.0) then
        temp = nc_fil->Band1
        ndim = dimsizes(temp)
-       time = ispan(0,ndim-1,1)*nt    ;5-15 minute interval data
+       time = st + ispan(0,ndim-1,1)*nt/60.    ;5-15 minute interval data
        data  = new((/nens,ndim/),"float")
     end if
     ;print(" " + nf)
     data(nf,:) = nc_fil->Band1    ;CAF [-]
   end do
+  time@units = "hours since 0000-01-01 00:00:00"
   data!1  = "time"
   data&time = time
   return(data)
@@ -34,13 +35,11 @@ begin
   nc_obs1 = addfile(diri1 + "/CAF_BoXPol_20150705.nc","r")
   datao1  = nc_obs1->Band1
   timeo1  = datao1&time
-  timeo1  = (timeo1 - timeo1(0))*60. ;minutes
-  print(timeo1)
  
 ; Read processed synthetic data
-  data1 = data_extract(diri1,nens,5)
-  data2 = data_extract(diri2,nens,5)
-  data3 = data_extract(diri3,nens,15)
+  data1 = data_extract(diri1,nens,14,5)
+  data2 = data_extract(diri2,nens,9,5)
+  data3 = data_extract(diri3,nens,11,15)
 
 ; Some staistics
   qStd1= 100.*dim_stddev_n(data1,0)/dim_avg_n(data1,0)
@@ -97,19 +96,30 @@ begin
 ;                                    "gray35", "gray29", "gray19", "gray10", "gray0"/)
  res@xyDashPattern              = 0
  res@tiYAxisString              = "Convective Area Fraction [-]"
- res@tiXAxisString              = "Time (minutes)" 
+ res@tiXAxisString              = "Time (UTC)" 
 
  res@trXMaxF = max(data1&time)
+ restick = True
+ restick@ttmFormat = "%H:%m"
+ restick@ttmAxis = "XB"
+ time_axis_labels(data1&time,res,restick)
+
  plot(0)                        = gsn_csm_xy (wks,data1&time,data1,res) ; create plot
 
  resd@xyLineColor               = "red"
  dum0                           = gsn_csm_xy (wks,timeo1,datao1,resd)
  overlay(plot(0),dum0)
 
+ res@xyLineColors    = (/"grey50"/)
+ dum2 = gsn_csm_xy (wks,data1&time,data1(6,:),res) ; create plot
+ overlay(plot(0),dum2)
+
  res@trXMaxF = max(data2&time)
+ time_axis_labels(data2&time,res,restick)
  plot(1)                        = gsn_csm_xy (wks,data2&time,data2,res)
  
  res@trXMaxF = max(data3&time)
+ time_axis_labels(data3&time,res,restick)
  plot(2)                        = gsn_csm_xy (wks,data3&time,data3,res)
  resP = True
  resP@gsnPanelFigureStrings = (/"a)","b)","c)"/)
@@ -121,8 +131,8 @@ begin
  lgres@lgLineThicknessF   = res@xyLineThicknessF
  lgres@lgDashIndexes      = (/0,0/)
  lgres@lgItemType         = "Lines"
- lgres@lgLabelFontHeightF = 0.28
- lgres@vpWidthF           = 0.1
+ lgres@lgLabelFontHeightF = 0.30
+ lgres@vpWidthF           = 0.14
  lgres@vpHeightF          = 0.1
  lgres@lgPerimOn          = False
  lbid = gsn_create_legend(wks,2,(/"BoXPol","Model"/),lgres)

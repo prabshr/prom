@@ -16,7 +16,7 @@ begin
  ydate     = "20150705"
  diri      = "/daten01/z4/database/PROM/" + ydate + "/GRIDS/"
  fn        = 18  ;15:30 UTC  ;17 
- xdist     = -28 ;km; ix           = 150   ;132
+; ydist     = 0 ;km; ix           = 150   ;132
  frhi        = True
 
  glon_idB    = 7.071663 ; Bonn Radar
@@ -42,17 +42,17 @@ begin
    Rho = read_radarnc(fname,3, glon_idB,glat_idB)
  end do
 
- x = Zh&X
- ix = closest_val(xdist,x)
- print("c-s at ix = " + ix + " X:" + x(ix) + " km" )
+ y = Zh&Y
+ iy = closest_val(ydist,y)
+ print("c-s at iy = " + iy + " Y:" + y(iy) + " km" )
 
- Zh_cs  = Zh(:,:,ix)
- Zdr_cs = Zdr(:,:,ix)
- Kdp_cs = Kdp(:,:,ix)
- Rho_cs = Rho(:,:,ix)
+ Zh_cs  = Zh(:,iy,:)
+ Zdr_cs = Zdr(:,iy,:)
+ Kdp_cs = Kdp(:,iy,:)
+ Rho_cs = Rho(:,iy,:)
 
  sdims  = dimsizes(Zh_cs)
- xval2x = conform_dims (sdims,Zh_cs&Y,1)
+ xval2x = conform_dims (sdims,Zh_cs&X,1)
  zval2x = conform_dims (sdims,Zh_cs&Z,0) 
  
  print("Plotting ...")
@@ -74,7 +74,7 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_BoXPol" + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("x11", "Figure_BoXPol" + "_t" + fn + "_iy" + iy)
 
  colors = load_radarColors(0)
  gsn_define_colormap(wks,colors)
@@ -130,8 +130,8 @@ begin
  res3@gsnLeftString = ""
  res3@vpWidthF = 0.52
 
- res3@trXMinF    = -25 ;min(xval2x)
- res3@trXMaxF    =  60 ;max(xval2x) 
+ res3@trXMinF    = -60 ;min(xval2x)
+ res3@trXMaxF    =  10 ;max(xval2x) 
  res3@trYMaxF    =  15
 
  res3@tmXBMode   = "Explicit"
@@ -143,7 +143,7 @@ begin
 
  res3@tmYLLabelsOn = True
  res3@tiYAxisString = "Height [km]"
- res3@tiXAxisString = "Y Range [km]"
+ res3@tiXAxisString = "Range [km]"
  res3@gsnLeftString = "BoXPol" ;expname
  res3@gsnRightString = Zh_cs@long_name + " " + Zh_cs@units
  res3@cnLevels                   =  colors@zhh_levs
@@ -196,7 +196,7 @@ begin
  resP = True
  resP@gsnMaximize    = True
  resP@gsnPanelDebug = True
- resP@gsnPanelXF = (/-1,0.29,0.53,0.77/)
- gsn_panel(wks,plot,(/1,4/), resP)
+; resP@gsnPanelXF = (/-1,0.29,0.53,0.77/)
+ gsn_panel(wks,plot,(/2,2/), resP)
 
 end

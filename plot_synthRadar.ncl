@@ -18,29 +18,37 @@ begin
  punits      = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
  izlevs      = (/25, 44, 54/) 
 
+ glon_idB    = 7.071663 ; Bonn Radar
+ glat_idB    = 50.73052 ;
+ dlat        = 0.5
+ dlon        = 0.5
+
  if (inst.eq.9) then
-   mpc         = (/50. + 30./60., 6. + 55./60. , 51. + 5./60., 7. + 40./60./)
-   ix          = 90 ;5
+   mpc         = (/50. + 35./60., 7., 51. + 30./60., 8. + 0./60./)
+;   ix          = 125
+;   fn          = 18
  end if
  if (inst.eq.8) then
    mpc         = (/50. + 30./60., 6. + 45./60. , 51. + 5./60., 7. + 30./60./)
-   ix          = 89
+;   ix          = 89
  end if
  if (inst.eq.7) then
    mpc         = (/50. + 35./60., 6. + 50./60. , 51. + 5./60., 7. + 20./60./)
-   ix          = 88
+;   ix          = 88
  end if
  if (inst.eq.6) then
    mpc         = (/50. + 40./60., 6. + 50./60., 51. + 15./60., 7. + 30./60./)
-   ;ix          = 90   ;location for X-cross-section
+   ix          = 90   ;location for X-cross-section
+   fn          = 11 ;10
+   lat_ext     = 51.2
  end if
  if (inst.eq.5) then
-    mpc         = (/50. + 30./60., 6. + 45./60. , 51., 7. + 15./60./)
-    mpc         = (/50. + 40./60., 7. + 20./60. , 51.5, 8. + 40./60./)
-    ix = 81
-    ix = 121
+    mpc         = (/50. + 40./60., 7. , 51. + 15./60., 7. + 40./60./)
+;    ix = 96   ;102
+;    fn = 18   ;17 
  end if
 
+; mpc  = (/glat_idB - dlat, glon_idB - dlon, glat_idB + dlat, glon_idB + dlon/)
 
  frhi        = True ;replace 3rd level ppi with rhi
  ;fn          = 15;8;20    ;file to read
@@ -129,7 +137,7 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_i" + inst + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("png", "Figure_i" + inst + "_t" + fn + "_ix" + ix)
 
  colors   = load_radarColors(0)
 
@@ -238,7 +246,7 @@ begin
  end if
 
  if (ik.eq.nzz) then
-   res@lbLabelBarOn = True 
+   res@lbLabelBarOn = True
    res@tmXBLabelsOn = True
  else
    res@lbLabelBarOn = False
@@ -287,7 +295,7 @@ begin
    if (ipol.eq.1) then
      res2@cnLevels                   = (/20.,30.,40.,50./) ; ipol_1levs(1:)
      dum      = gsn_csm_contour(wks,varh(0,iz,:,:),res2)
-     overlay(plot(ip),dum)
+     ;overlay(plot(ip),dum)
    end if
 
    if (frhi) then
@@ -300,6 +308,17 @@ begin
      delete(pres)
    end if
    end if 
+
+   txres               = True
+   txres@txFont        = fncps_no
+   txres@txBackgroundFillColor = "white"
+   ;dumtxt = gsn_add_text(wks,plot(0),"A",lon_plane(3),lat_plane(3),txres) ;
+   ;dumtxt = gsn_add_text(wks,plot(0),"A'",lon_plane(dimsizes(lon_plane)-1),lat_plane(dimsizes(lat_plane)-1),txres) ;
+   txres@txBackgroundFillColor = -1
+   txres@txFontThicknessF      = 5.
+   txres@txFontHeightF           = 0.045
+   txres@txFontColor           = "black"
+   dumtxt = gsn_add_text(wks,plot(ip),"x",glon_idB,glat_idB,txres)
 
    ;dum      = gsn_csm_contour(wks,phgt,res2)
    ;overlay(plot(ip),dum)
@@ -320,7 +339,7 @@ begin
       spol0&Y        = lat_c(:,ix) ; degrees
 
       xval2x        = conform_dims(sdims,spol&Y,1)*1.
-      zval2x        = mhgt(:,:,ix)
+      zval2x        = mhgt(:,:,ix)/1000.  ;km
 
       ; for terrain shading
       xypoly  = shade_terrain(xval2x,zval2x)
@@ -338,24 +357,31 @@ begin
       res3@cnInfoLabelOn    = False
       res3@cnLevels                   =  ipol_levs
 
+      ;
       res3@trGridType = "TriangularMesh"
       res3@sfXArray   = xval2x
       res3@sfYArray   = zval2x
       res3@gsnLeftString = ""
       res3@gsnRightString = ""
-      res3@vpWidthF = 0.52
+
+      res3@vpWidthF = 0.4
 
       res3@trXMinF    = mpc(0)
-      res3@trXMaxF    = mpc(2)
-      res3@trYMaxF    = 15000
+      res3@trXMaxF    = lat_ext ;mpc(2)
+      res3@trYMaxF    = 15.
 
       res3@tmXBMode   = "Explicit"
       res3@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20)) 
-      res3@tmXBLabels = res3@tmXBValues
+      res3@tmXBLabels = tointeger((res3@tmXBValues)*100)/100.
 
+      res3@lbOrientation = "Vertical"
+
+      res3@tiXAxisString = "Latitude [~F34~0~F~N]"
       if (ipol.eq.0) then
         res3@tmYLLabelsOn = True
+        res3@tiYAxisString = "Height [km]"
       else
+        res3@tiYAxisString = ""
         res3@tmYLLabelsOn = False
       end if
 
@@ -369,13 +395,13 @@ begin
         res3@cnInfoLabelOn = False
         res3@cnLevels                   = (/20.,30.,40.,50./) ; ipol_1levs(1:)
         dum = gsn_csm_contour(wks,spol0,res3)
-        overlay(plot(ip),dum)
+        ;overlay(plot(ip),dum)
         delete(res3@cnLevels)
       end if
 
       pres                  = True
       pres@gsFillColor      = "gray"
-      ;pres@gsLineThicknessF = 2.0          ; twice as thick
+      pres@gsLineThicknessF = 2.0          ; twice as thick
       dum0(ip) = gsn_add_polygon(wks,plot(ip),xpoly,ypoly,pres)
       dum1(ip) = gsn_add_polyline(wks,plot(ip),xpoly(0:sdims(1)-1),ypoly(0:sdims(1)-1),pres)
       pres@gsLineColor = "gray"
@@ -387,11 +413,21 @@ begin
  end do
  end do
 
+; Add annotation
+ txres               = True                      ; text mods desired
+ txres@txFontHeightF = 0.016                    ; text font height
+ txres@txJust        = "CenterLeft"              ; Default is "CenterCenter".
+
+ gsn_text_ndc(wks,"a)",.05,.77,txres)
+ gsn_text_ndc(wks,"b)",.05,.58,txres)
+ gsn_text_ndc(wks,"c)",.05,.39,txres)
+
+
  resP = True
  resP@gsnMaximize    = True 
  ;resP@gsnPanelXF = (/-1,0.36,0.64,-1,0.36,0.64,-1,0.36,0.64/)
  resP@gsnPanelXF = (/-1,0.26,0.46,.66,-1,0.26,0.46,.66,-1,0.26,0.46,.66/)  ;for 4 columns  
- ;resP@gsnPanelDebug = True
+ resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/nz,npol/), resP)
 
 end
