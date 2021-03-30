@@ -39,7 +39,7 @@ begin
  ydate        = "20150705"
  diri         = "/daten01/z4/database/PROM/" + ydate + "/GRIDS/"
  fn           = 18  ;15:30 UTC  ;17
- fns          = fn  - 6
+ fns          = fn  - 9 
  fne          = fn  + 2
 
  wks_type     = "png"
@@ -91,7 +91,7 @@ begin
 ;---------------------------------------------------------------------------
  plot = new(4,"graphic")
 
- fname_out = "cfad_radar_" + ydate + "_" + fn +  ".nc"
+ fname_out = "cfad_radar_" + ydate + "_" + fns +"_"+fne + ".nc"
 
  wks = gsn_open_wks(wks_type,fname_out)
  colors =(/"white","black","white","gray30","gray40","gray50","gray61","gray75", \
@@ -113,7 +113,7 @@ begin
  res@gsnMaximize                = False
  res@gsnLeftStringFontHeightF   = fncps_hgt
  res@gsnRightStringFontHeightF  = fncps_hgt
- res@gsnLeftString              = "BoxPol " ;+ timestr
+ res@gsnLeftString              = "BoXPol " ;+ timestr
 ; res@gsnRightString             = zhh_cfad@long_name
 
  ;stretched grid Resources
@@ -225,6 +225,13 @@ begin
  res@tiXAxisString         = var_cfad@units
  res@lbLabelBarOn          = True
  plot(3)     = gsn_csm_contour(wks,var_cfad,res)
+
+; Add annotation
+ txres               = True                      ; text mods desired
+ txres@txFontHeightF = 0.015                    ; text font height
+ txres@txJust        = "CenterLeft"              ; Default is "CenterCenter".
+
+ gsn_text_ndc(wks,"a)",.01,.67,txres)
 
  resP = True
  resP@gsnMaximize    = True

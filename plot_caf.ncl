@@ -35,6 +35,9 @@ begin
   nc_obs1 = addfile(diri1 + "/CAF_BoXPol_20150705.nc","r")
   datao1  = nc_obs1->Band1
   timeo1  = datao1&time
+  nc_obs2 = addfile(diri1 + "/CAF_JuXPol_20150705.nc","r")
+  datao2  = nc_obs2->Band1
+  timeo2  = datao2&time
  
 ; Read processed synthetic data
   data1 = data_extract(diri1,nens,14,5)
@@ -51,7 +54,7 @@ begin
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
  plot = new(3,"graphic")
- wks_type = "png"
+ wks_type = "x11"
  fname_out = "Figure_caf"
  wks = gsn_open_wks(wks_type,fname_out)
 
@@ -88,13 +91,16 @@ begin
  res@trYMaxF                    = 0.40
 
  res@xyLineThicknessF           = 3.
- resd = res
  res@xyLineColor                = "gray"
 ; res@xyLineColors               = (/"aquamarine4","aquamarine3","aquamarine2","aquamarine1","aquamarine", \
 ;                                    "dodgerblue4","dodgerblue3","dodgerblue2","dodgerblue1","dodgerblue", \ 
 ;                                    "goldenrod4", "goldenrod3","goldenrod2","goldenrod1","goldenrod", \
 ;                                    "gray35", "gray29", "gray19", "gray10", "gray0"/)
- res@xyDashPattern              = 0
+ res@xyDashPattern              = 1 
+
+ resd = res
+
+
  res@tiYAxisString              = "Convective Area Fraction [-]"
  res@tiXAxisString              = "Time (UTC)" 
 
@@ -109,10 +115,44 @@ begin
  resd@xyLineColor               = "red"
  dum0                           = gsn_csm_xy (wks,timeo1,datao1,resd)
  overlay(plot(0),dum0)
+ resd@xyLineColor               = "blue"
+ dum1                           = gsn_csm_xy (wks,timeo2,datao2,resd)
+ overlay(plot(0),dum1)
 
- res@xyLineColors    = (/"grey50"/)
- dum2 = gsn_csm_xy (wks,data1&time,data1(6,:),res) ; create plot
- overlay(plot(0),dum2)
+;Overlay time of CFAD comparison
+ fn           = 18  ;15:30 UTC  ;17
+ fns          = fn  - 9 
+ fne          = fn  + 2
+ resd@xyLineColor               = "red"
+ resd@xyDashPattern              = 0
+ dum00                           = gsn_csm_xy (wks,timeo1(fns:fne),datao1(fns:fne),resd)
+ overlay(plot(0),dum00)
+ 
+;Overlay ensemble for cfads
+ fn           = 18  ;15:30 UTC  ;17
+ fns          = fn  - 9 
+ fne          = fn  + 2 
+ sens         = 6
+
+; Overlay ensembles for CFAD comparison
+ resd@xyLineColor  = (/"grey50"/)
+ resd@xyDashPattern              = 1 
+ dumc0 = gsn_csm_xy (wks,data1&time,data1(5:9,:),resd) ; create plot
+ overlay(plot(0),dumc0)
+ resd@xyDashPattern              = 0 
+ dumc1 = gsn_csm_xy (wks,data1&time(fns:fne),data1(5:9,fns:fne),resd) ; create plot
+ overlay(plot(0),dumc1)
+
+;Overlay ensemble for polarimetric comparison
+ resd@xyDashPattern              = 1 
+ resd@xyLineColor    = (/"grey20"/)
+ dump0 = gsn_csm_xy (wks,data1&time,data1(sens,:),resd) ; create plot
+ overlay(plot(0),dump0)
+ resd@xyDashPattern              = 0 
+ dump1 = gsn_csm_xy (wks,data1&time(fns:fne),data1(sens,fns:fne),resd) ; create plot
+ overlay(plot(0),dump1)
+ 
+
 
  res@trXMaxF = max(data2&time)
  time_axis_labels(data2&time,res,restick)
@@ -127,15 +167,15 @@ begin
 
 ;Add legend
  lgres                    = True
- lgres@lgLineColors       = (/"red", "gray"/)
+ lgres@lgLineColors       = (/"red", "blue", "gray"/)
  lgres@lgLineThicknessF   = res@xyLineThicknessF
- lgres@lgDashIndexes      = (/0,0/)
+ lgres@lgDashIndexes      = (/0,0,0/)
  lgres@lgItemType         = "Lines"
  lgres@lgLabelFontHeightF = 0.30
  lgres@vpWidthF           = 0.14
  lgres@vpHeightF          = 0.1
  lgres@lgPerimOn          = False
- lbid = gsn_create_legend(wks,2,(/"BoXPol","Model"/),lgres)
+ lbid = gsn_create_legend(wks,3,(/"BoXPol","JuXPol","Model"/),lgres)
 
  amres = True
  amres@amParallelPosF   = 0.2

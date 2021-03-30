@@ -24,7 +24,7 @@ begin
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
    fns      = 21; 16 ;21 ; 16 ; 21 ;10 
    fne      = 21; 16 ;21 ;16 ; 21;10 ;36
-   ixp      = 1  ;which hydrometeor to explore 
+   ;ixp      = 1  ;which hydrometeor to explore 
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
    fns      = 488 ;19
@@ -53,13 +53,11 @@ begin
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
  uzmask      = False
- scale_uz    = 10.0
+ scale_uz    = 1.0
  hmax        = 15.0        ;km
- fpressure   = 600. ;350.   ;hPa, for pressure plot
+ fpressure   = 500. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
- ;test
- mpcorner    = (/50.5, 6.9, 51.2, 7.5/)
  
  hydro_colors     = (/"green","blue","skyblue","purple","grey40","orange"/)
  hydro_dash       = (/0, 0, 1, 1, 1, 1/)
@@ -96,7 +94,7 @@ begin
    xmax         = (/2.6E-10  , 3.0E-6 , 1.E-6 , 2.E-5 , 5.E-4, 5.E-4/)         ;g
    qmax         = 30.
    qmin         = 0.001 
-   qcnlevs       = (/0.001, 1.0, 5.0, 10., 15., 20., 25., 30./)
+   qcnlevs       = (/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
    scale_varh   = 1000.   ; m to  mm
    hydunits     = "mm"
    hydname      = "Max. Volume Diameter"
@@ -183,7 +181,9 @@ begin
    glatlon = storm_tracker_nclf(uz_hhl,lat,lon,wfac,wss,wse,ext,mpcornerw)
  end if
  glat_id    = glatlon(0)
- glon_id    = glatlon(1)
+ glon_id    = glatlon(1) 
+
+ print("Cross-section through " + glon_id)
 
  print("Updating mpcorner and mpcornerw")
  mpcorner   = (/glat_id-wss*ext(0)     ,glon_id-wss*ext(1)     ,glat_id+wse*ext(0)     ,glon_id+wse*ext(1)/)
@@ -268,6 +268,9 @@ begin
     ji(2) = ji(3) - ngrid + 1
     print("X-Boundary reached ...")
   end if
+
+  print("Crop indices ")
+  print(" " + ji)
  
   lat_c    = lat(ji(0):ji(1),ji(2):ji(3))
   lon_c    = lon(ji(0):ji(1),ji(2):ji(3))
@@ -323,16 +326,11 @@ begin
   uy_plane    = (/wrf_user_intrp3d(uy_c,zmodelc,"v",plane,Ipangle,iopt)/)
   uz_plane    = (/wrf_user_intrp3d(uz_hhl_c,zmodelc,"v",plane,Ipangle,iopt)/)
   ndimp       = dimsizes(tc_plane)
+
   varh_plane    = new((/nh,ndimp(0),ndimp(1)/),"float")
   do ih = 0, nh-1
     varh_plane(ih,:,:)    = wrf_user_intrp3d(varh_c(ih,:,:,:),zmodelc,"v",plane,Ipangle,iopt)
   end do
-  vc_plane   = (/varh_plane(0,:,:)/)
-  vr_plane   = (/varh_plane(1,:,:)/)
-  vi_plane   = (/varh_plane(2,:,:)/)
-  vs_plane   = (/varh_plane(3,:,:)/)
-  vg_plane   = (/varh_plane(4,:,:)/)
-  vh_plane   = (/varh_plane(5,:,:)/)
 
 ; Compute perturbation for THETAE to diagnose cold pool
   nplane     = dimsizes(te_plane)
@@ -362,41 +360,11 @@ begin
   te_plane@long_name    = "THETAE'"
   te_plane@units        = "C"
 
-  vc_plane!0            = "height"
-  vc_plane!1            = "longitude" 
-  vc_plane&longitude    = (/x_plane/)
-  vc_plane@long_name    = hydname 
-  vc_plane@units        = hydunits
-
-  vi_plane!0            = "height"
-  vi_plane!1            = "longitude" 
-  vi_plane&longitude    = (/x_plane/)
-  vi_plane@long_name    = hydname 
-  vi_plane@units        = hydunits
-
-  vg_plane!0            = "height"
-  vg_plane!1            = "longitude" 
-  vg_plane&longitude    = (/x_plane/)
-  vg_plane@long_name    = hydname 
-  vg_plane@units        = hydunits
-
-  vs_plane!0            = "height"
-  vs_plane!1            = "longitude" 
-  vs_plane&longitude    = (/x_plane/)
-  vs_plane@long_name    = hydname
-  vs_plane@units        = hydunits
-
-  vh_plane!0            = "height"
-  vh_plane!1            = "longitude" 
-  vh_plane&longitude    = (/x_plane/)
-  vh_plane@long_name    = hydname
-  vh_plane@units        = hydunits 
-
-  vr_plane!0            = "height"
-  vr_plane!1            = "longitude" 
-  vr_plane&longitude    = (/x_plane/)
-  vr_plane@long_name    = hydname 
-  vr_plane@units        = hydunits 
+  varh_plane!1            = "height"
+  varh_plane!2            = "longitude" 
+  varh_plane&longitude    = (/x_plane/)
+  varh_plane@long_name    = hydname 
+  varh_plane@units        = hydunits
 
   ux_plane!0         = "height"
   ux_plane!1         = "longitude" 
@@ -422,23 +390,15 @@ begin
     sloc0 = sloc-1
     sloc1 = sloc+1
     tc_v = dim_avg_n(tc_plane(0:hloc,sloc0:sloc1),1)
-    vc_v = dim_avg_n(vc_plane(0:hloc,sloc0:sloc1),1)
-    vi_v = dim_avg_n(vi_plane(0:hloc,sloc0:sloc1),1)
-    vg_v = dim_avg_n(vg_plane(0:hloc,sloc0:sloc1),1)
-    vs_v = dim_avg_n(vs_plane(0:hloc,sloc0:sloc1),1)
-    vh_v = dim_avg_n(vh_plane(0:hloc,sloc0:sloc1),1)
-    vr_v = dim_avg_n(vr_plane(0:hloc,sloc0:sloc1),1)
+    varh_v = dim_avg_n(varh_plane(:,0:hloc,sloc0:sloc1),2)
     ux_v = dim_avg_n(ux_plane(0:hloc,sloc0:sloc1),1)
     uy_v = dim_avg_n(uy_plane(0:hloc,sloc0:sloc1),1)
     uz_v = dim_avg_n(uz_plane(0:hloc,sloc0:sloc1),1)
 
     ;For correct profile plot
-    vc_v = mask(vc_v,vc_v.eq.0,False)
-    vi_v = mask(vi_v,vi_v.eq.0,False)
-    vs_v = mask(vs_v,vs_v.eq.0,False)
-    vg_v = mask(vg_v,vg_v.eq.0,False)
-    vr_v = mask(vr_v,vr_v.eq.0,False)
-    vh_v = mask(vh_v,vh_v.eq.0,False)
+    do ih = 0, nh-1
+      varh_v(ih,:) = mask(varh_v(ih,:),varh_v(ih,:).eq.0, False)
+    end do 
  
 ;-------------------------------------------------------------------------------
 ;#10 Interpolate Cropped Data in horizontal at fixed pressure
@@ -506,8 +466,8 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
-  fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn)
+  wks_type = "x11"
+  fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn) + "_" + ixp
   wks = gsn_open_wks(wks_type,fname_out)
 
   gsn_define_colormap(wks,"precip2_17lev")
@@ -725,7 +685,7 @@ begin
  rescs@vpXF                          = 0.14
  rescs@vpYF                          = 0.45
  rescs@vpHeightF                     = 0.35
- rescs@vpWidthF                      = 0.7
+ rescs@vpWidthF  = 0.35 ;                    = 0.7
 
  rescsv = rescs
 
@@ -735,6 +695,8 @@ begin
  rescs@tiYAxisString                 = "Height (km)"
 
  rescs@trYMaxF                    = hloc ;80
+ rescs@trXMinF                    = 50.8
+ rescs@trXMaxF                    = 51.0
 
  loc_label                        = ispan(11,99,10)
  rescs@tmYLMode                   = "Explicit"
@@ -750,43 +712,41 @@ begin
  rescs@pmLabelBarHeightF          = 0.35
 
  ;Contour
- rescs@cnMissingValFillPattern       = 8
- rescs@cnMissingValFillColor         = "black"
- rescs@cnMissingValPerimOn           = True            ;
- rescs@cnMissingValPerimColor        = "black"         ;
- rescs@cnMissingValPerimDashPattern  = 1          ;
- rescs@cnMissingValPerimThicknessF   = 2.0
+ ;rescs@cnMissingValFillPattern       = 8
+ ;rescs@cnMissingValFillColor         = "black"
+ ;rescs@cnMissingValPerimOn           = True            ;
+ ;rescs@cnMissingValPerimColor        = "black"         ;
+ ;rescs@cnMissingValPerimDashPattern  = 1          ;
+ ;rescs@cnMissingValPerimThicknessF   = 2.0
  rescs@cnLevelSelectionMode          = "ExplicitLevels"
 
 ; Cross-section contour
  rescs@cnLevels                      = qcnlevs
  rescs@cnFillOn                   = True
+ rescs@cnFillMode                 = "RasterFill"
  rescs@cnLinesOn                  = True ;False
  rescs@cnInfoLabelOn              = False   ; Turn off annotations
  rescs@cnLineLabelsOn             = True; False
 
- plot(1)                          = gsn_csm_contour(wks, vh_plane, rescs)
+ plot(1)                          = gsn_csm_contour(wks, varh_plane(ixp,:,:), rescs)
+ ;plot(1)                          = gsn_csm_contour(wks, uz_plane, rescs)
+
 
  rescs@cnLineThicknessF           = 2.0
  rescs@cnFillOn                   = False
  rescs@cnLineColor                = hydro_colors(0) 
- dumqp                            = gsn_csm_contour(wks, vc_plane, rescs)
  ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(2)
- dumqp                            = gsn_csm_contour(wks, vi_plane, rescs)
  ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(3) 
- dumqp                            = gsn_csm_contour(wks, vs_plane, rescs)
  ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(4) 
- dumqp                            = gsn_csm_contour(wks, vg_plane, rescs)
  ;overlay(plot(1),dumqp)
 
  rescs@cnLineColor                = hydro_colors(5) 
- dumqp                            = gsn_csm_contour(wks, vh_plane, rescs)
  ;overlay(plot(1),dumqp)
 
  ;;Vector overlay along the cross-section
@@ -882,28 +842,8 @@ begin
    resV@trXLog                        = True
  end if
  resV@trYMaxF                       = max(ht_v)
- resV@xyLineColor                   = hydro_colors(0)
- plot(2)                            = gsn_csm_xy (wks,vc_v,ht_v,resV) ; create plot
-
- resV@xyLineColor                   = hydro_colors(1) 
- dumd                               = gsn_csm_xy (wks,vr_v,ht_v,resV)
- overlay(plot(2),dumd)
-
- resV@xyLineColor                   = hydro_colors(2)
- dumd                               = gsn_csm_xy (wks,vi_v,ht_v,resV)
- overlay(plot(2),dumd)
-
- resV@xyLineColor                   = hydro_colors(3)
- dumd                               = gsn_csm_xy (wks,vs_v,ht_v,resV)
- overlay(plot(2),dumd)
-
- resV@xyLineColor                   = hydro_colors(4)
- dumd                               = gsn_csm_xy (wks,vg_v,ht_v,resV)
- overlay(plot(2),dumd)
-
- resV@xyLineColor                   = hydro_colors(5)
- dumd                               = gsn_csm_xy (wks,vh_v,ht_v,resV)
- overlay(plot(2),dumd)
+ resV@xyLineColor                   = hydro_colors(ixp)
+ plot(2)                            = gsn_csm_xy (wks,varh_v(ixp,:),ht_v,resV) ; create plot
 
 ;Add legend
  lgres                    = True
@@ -977,8 +917,7 @@ begin
  delete([/vx_c, tlc_c, te_c, th_c, tk_c, qv_c, ps_c, ux_c, uy_c, uz_hhl_c, varh_c/])
  delete([/tlc,te_p, qv_p,ux_p, uy_p, vx_p, wx_p1, wx_p2/])
  delete([/x_plane,te_plane,tc_plane,ux_plane,uy_plane,uz_plane/])
- delete([/vc_plane,vr_plane,vi_plane,vs_plane,vg_plane,vh_plane/])
- delete([/vr_sum, ht_v, vc_v, vi_v, vg_v, vs_v, vh_v, vr_v/])
+ delete([/vr_sum, ht_v/])
  delete([/ux_v, uy_v, uz_v/])
  delete([/ux_plane_c, uz_plane_c/])
 
