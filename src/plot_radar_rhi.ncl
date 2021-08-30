@@ -13,15 +13,24 @@ begin
 
 ;User Settings
 ;---------------------------------------------------------------------------
- ydate     = "20150705"
- diri      = "/daten01/z4/database/PROM/" + ydate + "/GRIDS/"
- fn        = 18  ;15:30 UTC  ;17 
- xdist     = -28 ;km; ix           = 150   ;132
+ ;pid       = 0 
+ ydates    = (/"20150705","20160513","20170706"/)
+ fnss      = (/18, 18, 12/)    ;(/15:30 UTC ,10:30 UTC, UTC/)  
+ trXMin    = (/-25,-30,-40/) 
+ trXMax    = (/60, 10, 50/)
+ xdists    = (/-28, 40, -28/)  ;km; ix           = 150   ;132
+ updates   = (/1, 0, 1/)  ;
+
  frhi        = True
 
  glon_idB    = 7.071663 ; Bonn Radar
  glat_idB    = 50.73052 ;
+ radar     = "BoXPol" 
 
+ fn        = fnss(pid)  
+ ydate     = ydates(pid)
+ xdist     = xdists(pid) 
+ diri      = "/daten01/z4/database/PROM/" + ydate + "/" + radar + "/GRIDS/"
 ;Read netcdf files 
 ;---------------------------------------------------------------------------
 
@@ -35,6 +44,12 @@ begin
  do nf= fns,fne ;0, ndimf-1
    ;Read data
    fname = fils_var(nf)
+   if (updates(pid).eq.1 .and. pid.eq.2) then
+     fname = "/daten01/z4/database/PROM/updated/GRIDS//grid_volume_bon_eac_201707061400.nc"
+   end if
+   if (updates(pid).eq.1 .and. pid.eq.0) then
+     fname = "/daten01/z4/database/PROM/updated/GRIDS//grid_volume_bon_eac_201507051530.nc"
+   end if
    print("Extracting  " + fname)
    Zh  = read_radarnc(fname,0, glon_idB,glat_idB) 
    Zdr = read_radarnc(fname,1, glon_idB,glat_idB)
@@ -74,9 +89,10 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_BoXPol" + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("x11", "Figure_" + radar +  "_t" + fn + "_ix" + ix)
 
  colors = load_radarColors(0)
+ colors(2) = "white"
  gsn_define_colormap(wks,colors)
 
  res      = True
@@ -130,8 +146,8 @@ begin
  res3@gsnLeftString = ""
  res3@vpWidthF = 0.52
 
- res3@trXMinF    = -25 ;min(xval2x)
- res3@trXMaxF    =  60 ;max(xval2x) 
+ res3@trXMinF    = trXMin(pid) ;-25 ;min(xval2x)
+ res3@trXMaxF    = trXMax(pid) ; 60 ;max(xval2x) 
  res3@trYMaxF    =  15
 
  res3@tmXBMode   = "Explicit"
@@ -144,7 +160,7 @@ begin
  res3@tmYLLabelsOn = True
  res3@tiYAxisString = "Height [km]"
  res3@tiXAxisString = "Y Range [km]"
- res3@gsnLeftString = "BoXPol" ;expname
+ res3@gsnLeftString = radar 
  res3@gsnRightString = Zh_cs@long_name + " " + Zh_cs@units
  res3@cnLevels                   =  colors@zhh_levs
  plot(0)  = gsn_csm_contour(wks,Zh_cs,res3)
@@ -191,12 +207,14 @@ begin
 
  txres = True
  txres@txFontHeightF = 0.012
- gsn_text_ndc(wks,"b)",.012,.62,txres)
+; gsn_text_ndc(wks,"b)",.012,.62,txres)
 
  resP = True
  resP@gsnMaximize    = True
- resP@gsnPanelDebug = True
+ ;resP@gsnPanelDebug = True
  resP@gsnPanelXF = (/-1,0.29,0.53,0.77/)
  gsn_panel(wks,plot,(/1,4/), resP)
 
+ fout = addfile("temp.nc","c")
+ fout->ZDR = Zdr_cs
 end

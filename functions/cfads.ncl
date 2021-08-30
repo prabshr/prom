@@ -21,6 +21,7 @@ begin
        zpdf        = pdfx(var(k,:,:), nbins, opt)
      end if
      end if
+
      if (all(ismissing(zpdf))) then
        nMax(k)        = nMax@_FillValue
      else
@@ -36,18 +37,20 @@ begin
      delete(zpdf)
    end do
 
-   if (YH95) then
-     print("YH95 units % perkm-1 per dbZ")
-     ;Mask CFAD if nMax(k) .lt. 20% of max(nMax)
-     thrmax = 0.20
-     do k = 0, dimsizes(height)-1
-       if (ismissing(nMax(k)) .or. nMax(k).lt.thrmax*max(nMax)) then
-         var_cfad(k,:) = var_cfad@_FillValue
-       end if
-     end do
-   else
-     print("     units %")
-   end if
+  ;Mask CFAD if nMax(k) .lt. 20% of max(nMax)
+  thrmax = 0.20
+  do k = 0, dimsizes(height)-1
+    if (ismissing(nMax(k)) .or. nMax(k).lt.thrmax*max(nMax)) then
+      print("Masking at " + k + " " + nMax(k) + " < 20 % of max nMax")
+      var_cfad(k,:) = var_cfad@_FillValue
+    end if
+  end do
+
+  if (YH95) then
+    print("YH95 units % perkm-1 per dbZ")
+  else
+    print("     units %")
+  end if
 
   ;Assign co-ordinates
   var_cfad&height = (/height/)
@@ -56,7 +59,7 @@ begin
   var_cfad@units     = unit
   ;
   ;Write netcdf files for quick plotting
-  foutname = "CFAD.nc"
+  foutname = "CFAD_" + lname + ".nc"
   system("rm " + foutname)
   fout = addfile(foutname,"c")
   fout->cfad = var_cfad

@@ -1,6 +1,7 @@
 ;This is a iterative process,
-;First generate the CAF and debug ouput
+;First generate the CAF and debug ouput with fcrop= False, fcrop2=False
 ;Based on debug ouput, mask the CAF for non-valid times (e.g.,when storm is out of extent)
+;Copy the debug with fcrop=True, fcrop2=True to the scratch folder, as this mask is necessary for CFADS
 ;Re-run script
 ;See STEP EVAL section
 
@@ -12,9 +13,13 @@ begin
  dbz_th    = 40.  ;dBZ
  dbz_min   = 0.  ;dBZ
  hgt_thr   = 2.  ;km
- ydate     = "20150705"
- radar     = "JuXPol"
+ pid       = 2 
+ ydates    = (/"20150705","20160513","20170706"/)
+ ydate     = ydates(pid)
+ radar     = "BoXPol"
  diri      = "/daten01/z4/database/PROM/" + ydate + "/" + radar + "/GRIDS/"
+ fcrop     = True   ;spatial filter
+ fcrop2    = True  ;temporal filter
 
  gfils     = systemfunc("ls " + diri + "/*.nc")
  ndim      = dimsizes(gfils)
@@ -45,25 +50,72 @@ begin
    print(nf + " " + time(nf))
  end do
 
- if (radar.eq."BoXPolXXX") then
- ; STEP EVAL 2 Clutter Removal
- ix= (/(/101,305/),(/108,312/),(/115,321/),(/128,326/),(/134,329/),\
-       (/156,334/),(/166,352/),(/178,332/),(/185,333/),(/190,344/)/)
- do nf = 10, 19 
-  it = nf-10
-  Zh(nf,:,ix(it,0):ix(it,1))   = Zh@_FillValue
- end do
+ if (fcrop) then
+   print("Manual storm selection ....")
+   nzh   = dimsizes(Zh)
+   nt    = nzh(0)
+   ny    = nzh(1)
+   nx    = nzh(2)
+   datac = new((/nt,ny,nx/),typeof(Zh))
+   datac = 999
+   maskc = datac
 
- delete(ix)
- ix = (/(/0,198/),(/0,196/),(/0,198/),(/0,210/),(/113,239/),(/80,271/),\
-        (/84,280/),(/94,290/),(/95,300/)/)
- iy = (/(/0,200/),(/0,210/),(/0,217/),(/0,223/),(/0,203/),(/0,202/),\
-        (/0,207/),(/0,217/),(/0,227/)/)
- do nf = 27, 35
-  it = nf-27
-  Zh(nf,:,ix(it,0):ix(it,1))   = Zh@_FillValue
-  Zh(nf,iy(it,0):iy(it,1),:)   = Zh@_FillValue
- end do
+;PROM1
+   if (pid.eq.0) then
+
+   if (radar.eq."JuXPol") then
+     yx = (/(/0,110,0,61/),(/0,124,0,62/), (/0,138,0,74/), (/0,157,0,104/),      \
+        (/0,176,0,121/), (/0,190,0,138/), (/0,185,0,151/), (/0,194,0,160/) , \
+        (/0,215,0,165/), (/0,230,0,178/), (/0,231,0,183/), (/0,238,0,191/),  \
+        (/0,240,0,200/), (/0,258,78,214/),  (/0,243,40,218/), (/0,246,70,228/),  \
+        (/0,266,110,269/), (/0,270,136,271/), (/128,276,156,278/), (/111,276,166,282/), \
+        (/124,277,177,277/), (/127,285,194,289/), (/114,283,203,302/),(/119,289,208,315/), \
+        (/139,289,230,327/), (/146,294,239,341/),(/156,305,245,353/), (/159,296,251,362/), \
+        (/166,330,258,375/)  /)
+   end if
+
+   if (radar.eq."BoXPol") then
+     yx  = (/(/0,125,0,50/), (/0,125,0,50/), (/0,125,0,50/), (/0,125,0,50/), \
+         (/0,125,0,50/), (/0,139,0,60/), (/0,228,0,68/), (/0,235,0,80/), \
+         (/0,250,0,85/), (/0,264,0,96/), (/0,273,0,99/), (/0,275,0,109/), \
+         (/0,279,0,117/), (/0,290,0,125/), (/0,299,0,135/), (/0,305,0,157/), \
+         (/0,299,0,170/), (/154,319,0,179/), (/158,317,0,186/), (/159,333,0,189/), \
+         (/159,322,107,195/), (/165,300,130,202/), (/170,305,140,212/), (/175,319,147,236/), \
+         (/185,334,166,249/), (/193,330,170,261/), (/195,361,180,273/), (/204,370,190,287/), \
+         (/214,385,200,302/), (/218,390,210,308/), (/218,390,232,312/),(/218,390,243,nx-1/), \
+         (/214,385,259,nx-1/), (/214,385,269,nx-1/) /)
+   end if
+  
+   ntt = dimsizes(yx)
+   do nf = 0, ntt(0)-1
+     datac(nf,yx(nf,0):yx(nf,1),yx(nf,2):yx(nf,3)) = Zh(nf,yx(nf,0):yx(nf,1),yx(nf,2):yx(nf,3))
+     maskc(nf,yx(nf,0):yx(nf,1),yx(nf,2):yx(nf,3)) = 1
+   end do
+
+   end if
+
+;PROM2
+   if (pid.eq.1 .and. radar.eq."BoXPol") then
+     yx = (/0,ny-1,0,250/)
+     datac   = Zh
+     maskc   = 1
+     do nf = 0, 26 
+       datac(nf,yx(0):yx(1),yx(2):yx(3)) = 999 
+       maskc(nf,yx(0):yx(1),yx(2):yx(3)) = 999
+     end do
+     yx = (/175,ny-1,0,230/) 
+     do nf = 27,nt-1
+       datac(nf,yx(0):yx(1),yx(2):yx(3)) = 999
+       datac(nf,0:175,0:145) = 999
+     end do
+   end if
+
+   if (pid.eq.2 ) then
+     datac = Zh
+     maskc = 1
+   end if
+
+   Zh = datac
  end if
 
  varh       = new(ndim,"float")
@@ -91,19 +143,40 @@ begin
  system("rm debug_" + radar + ".nc")
  fout = addfile("debug_" + radar + ".nc","c")
  fout->Band1 = Zh
+ if (fcrop) then
+   fout->Band2 = maskc
+ end if
 
+ if (fcrop2) then
  if (ydate .eq. "20150705" .and. radar .eq. "JuXPol") then
-  varh(16:19) = varh@_FillValue 
+  varh(18:21) = varh@_FillValue 
   varh(29:) = varh@_FillValue
   varh1(29:) = varh1@_FillValue
-  varh1(16:19) = varh1@_FillValue
+  varh1(18:21) = varh1@_FillValue
  end if
 
  if (ydate .eq. "20150705" .and. radar .eq. "BoXPol") then
-  a = array_append_record (ispan(0,9,1), ispan(20,26,1), 0)
-  imsk = array_append_record (a, ispan(35,ndim-1,1),0)
+  a = array_append_record (ispan(0,8,1), ispan(19,25,1), 0)
+  imsk = array_append_record (a, ispan(34,ndim-1,1),0)
   varh(imsk) = varh@_FillValue
   varh1(imsk) = varh1@_FillValue
+ end if
+
+ if (ydate .eq. "20170706" .and. radar .eq. "JuXPol") then
+  varh(0:7) = varh@_FillValue
+  varh1(0:7) = varh1@_FillValue
+  varh(12:22) = varh@_FillValue
+  varh1(12:22) = varh1@_FillValue
+ end if
+
+ if (ydate .eq. "20170706" .and. radar .eq. "BoXPol") then
+  varh(0:9)   = varh@_FillValue
+  varh1(0:9)  = varh@_FillValue
+  varh(14:15) = varh@_FillValue
+  varh1(14:15) = varh1@_FillValue
+ end if
+
+
  end if
 
  ;Plot

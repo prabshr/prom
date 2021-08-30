@@ -13,3 +13,19 @@ compare_ppi_model.ncl --> Compares synthetic polarimetric variables between mode
                           model mass point height in that model level (a.m.s.l)
 compare_rhi_model.ncl --> Compares synthetic polarimetric variables between model level data and interpolated data
 
+diagnose_atmwater.ncl --> Computes Precipitatble Water, LWP and IWP from model output
+	  
+diagnose_prfo.ncl		  
+edgeDetetction.ncl   
+diagnose_convfraction.ncl  
+diagnose_QX.ncl		  
+extract_CAF_obs.ncl
+compare_var_model.ncl  
+diagnose_hydro.ncl	  
+diagnose_spatial_pattern.ncl	  
+plot_model_rhi.ncl
+debug_storm.ncl        
+diagnose_model.ncl	  
+diagnose_vertical_profiles.ncl  
+
+       

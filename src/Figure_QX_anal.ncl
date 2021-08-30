@@ -1,20 +1,8 @@
-;Uses uses maximum vertical velocity to track the strom propagation using
+;Uses maximum vertical velocity to track the strom propagation using
 ;a updated cropped region defined by "glat_id,glon_id and ext"
-;Plots polarimetric variables at "fpressure"
-;      cross-section of polarimetric variables, wind vectors and cold pool at "Ipangle"
-;      vertical profile of polarimetric variables 
-; Reflectivity files are only generated from 
-; prom1 0 to 36
-; prom2 19 to 55
-; prom3 12 to 48
-; so they have different offsets based on files
-; Parmeters
-; prom = 1, 2, 3 ;experiments
-; ipol = 0, 1, 2, 3 ; polarimetric variables
-; Ipangle = azimuth 
-; ext_pfo, extent from Bonn Radar in grid numbers
-
-; itype_gscp = microphysics type
+;Plots total hydrometeor, vertical velocity and wind vectors at "fpressure"
+;      cross-section of hydrometeor, wind vectors and cold pool at "Ipangle"
+;      vertical profile of hydrometor 
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
@@ -22,82 +10,109 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
-load "$prom_root//functions/cosmo_time_nclf.ncl"
-load "$prom_root/functions/calc_rho_nclf.ncl"
-load "$prom_root/functions/storm_tracker_nclf.ncl"
-load "$prom_root/functions/radarline_nclf.ncl"
-load "$PROM/functions/load_radarColors.ncl"
-external EXT1 "$prom_root/functions/readdim.so"
-external EXT2 "$prom_root/functions/readascii.so"
-
+load "./functions/cosmo_time_nclf.ncl"
+load "./functions/calc_rho_nclf.ncl"
+load "./functions/storm_tracker_nclf.ncl"
+load "./functions/radarline_nclf.ncl"
 begin
 
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- prom=1 
+ prom=1
+ inst=6
+ opt=1
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 21 ; 16 ; 21 ;10
-   fne      = 21 
+   ;ixp      = 1  ;which hydrometeor to explore 
+   fns      = 11 ;21 ; 16 ; 21 ;10
+   fne      = 11 ;21
    dns      = 0  ; offset for dbz files
+   xlon = (/50.7, 51.1/)
+   offs = -4
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
-   fns      = 48 ;19
+   fns      = 488 ;19
    fne      = 48 ;55
-   dns      = 19 ; offset for dbz files
  else if (prom.eq.3) then
    diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
-   fns     = 0 ;40 ;12
-   fne     = 0; 48
-   dns     = 0 ;12 ; offset for dbz files
+   fns     = 0 ;12+12
+   fne     = 0 ;48
  end if
  end if
  end if
 
  itype_gscp  = "HET2483"
- ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
- Ipangles    = (/0.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+
+ ext         = (/0.45,0.6/)* 1.0 ;2.0 ;3.0   ;*1.2
  ngridmax    = 90*3  ;110 ;90
- ext_pfo     = 90  ;controls extent of c-s
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
  fstrack     = True ;False
 
- glon_idB    = (/7.071663, 7.489/) ; Bonn Radar
- glat_idB    = (/50.73052, 50.659/) ;
-
+ glon_idB    = 7.071663 ; Bonn Radar
+ glat_idB    = 50.73052 ;
  extB        = 0.91     ;extent in degrees
+
+ Ipangles    = (/0.,0.,0./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
+ qprom       = (/4.0, 3.0, 3.0/)    ;max for vertical profile
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
  uzmask      = False
- scale_uz    = 10.0
+ scale_uz    = 1.0
  hmax        = 15.0        ;km
- fpressure   = 600. ;350.   ;hPa, for pressure plot
+ fpressure   = 500. ;350.   ;hPa, for pressure plot
 
- mpcorner    = (/glat_idB(0)-ext(0),glon_idB(0)-ext(1),glat_idB(0)+ext(0),glon_idB(0)+ext(1)/)
+ mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
  
- pv_colors   = (/"green","blue","skyblue","purple","grey40","orange"/)
-
- qmin         = tointeger((/-5.,-0.1,-0.5 ,0.8/)*100.)
- qlev         = tointeger((/  5., 0.25, 0.1,0.1/)*100.)
- qmax         = tointeger((/ 55., 2.0, 3. ,1.0/)*100.)
- pv_dash       = (/0, 0, 1, 1, 1, 1/)
- pv_thickness  = pv_dash + 4.
+ hydro_colors     = (/"green","blue","skyblue","purple","grey40","orange"/)
+ hydro_dash       = (/0, 0, 1, 1, 1, 1/)
+ hydro_thickness  = hydro_dash + 4.
 
  subevent    = itype_gscp + "/runE_" + inst + "_" + itype_gscp
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
- diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
- dataFillVal    = -999        ;Polarimetric flags
 
 ;-----------------------------------------------------------------------------------------
 ;#2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
- polarimetric = (/"Zh","Zdr","KDP","RHV"/)
- punits      = (/"dBZ","dB","deg/km ", "-"/)
- ;ipol        = 1 
+ hydrometeors_qx = (/"QC","QR","QI","QS","QG","QH"/)
+ hydrometeors_qn = (/"NCCLOUD","NCRAIN","NCICE","NCSNOW","NCGRAUPEL","NCHAIL"/)
+
+ if (opt.eq.0) then
+   hydrometeors = hydrometeors_qn
+   scale_varh   = 1/1.E3
+   qcnlevs      = (/1.1, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E7/)
+   hydunits     = "L~S~-1~N~"
+   hydname      = "Number Concentration"
+ else if (opt.eq.1) then
+   hydrometeors = hydrometeors_qx
+   scale_varh   = 1000.  ;kg/kg to g/kg
+   qcnlevs      = (/0.01,0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0/)
+   hydunits     = "g/m~S~3~N~"
+   hydname      = "Sp. Hydrometeor Content"
+ else if (opt.eq.2) then
+   x3           = 1./3.
+   hydrometeors = hydrometeors_qx
+   a_geo        = (/0.124    , 0.124  , 0.835 , 2.4    , 0.142     , 0.1366/)  ;mkg-b
+   b_geo        = (/x3       , x3     , 0.39  , 0.455  , 0.314     , x3/)      ;-
+   xmin         = (/4.2E-15  , 2.6E-10, 1.E-12, 1.E-10, 1.E-9, 2.6E-9/)        ;kg
+   xmax         = (/2.6E-10  , 3.0E-6 , 1.E-6 , 2.E-5 , 5.E-4, 5.E-4/)         ;g
+   qmax         = 30.
+   qmin         = 0.001 
+   qcnlevs       = (/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
+   scale_varh   = 1000.   ; m to  mm
+   hydunits     = "mm"
+   hydname      = "Max. Volume Diameter"
+ else
+   print("code not written for opt = " + opt)
+   exit
+ end if
+ end if
+ end if
+;
+
 ;-----------------------------------------------------------------------------------------
-;#3  READ NC AND ASCII FILES
+;#3  READ NC FILES
 ;-------------------------------------------------------------------------------------
  nc_cosI = addfile(diri_cosI +"lfff00000000c.nc","r")
  lat = nc_cosI->lat
@@ -114,15 +129,13 @@ begin
 ;
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  nfils   = dimsizes(fils_cos)
- nfils    = fne - fns + 1
 
  do fn  = fns, fne ;nfils -1      ;BIG LOOP
 
- print(fils_cos(fn))
  nc_cos = addfile(fils_cos(fn),"r")
  time   = nc_cos->time
  ;
- str_time = cosmo_time_nclf(time,1)  ;0 for full date
+ str_time = cosmo_time_nclf(time,1)  ; 0 for date
 
  print("----------------------------------------------")
  print(fn + " " + str_time) 
@@ -136,7 +149,7 @@ begin
  ux              = nc_cos->U(0,::-1,:,:)
  uy              = nc_cos->V(0,::-1,:,:)
  uz              = nc_cos->W(0,::-1,:,:)
- uz_hhl          = uz(1:80,:,:)*0.0
+ uz_hhl          = uz(1:80,:,:)*0.
  do kk = 0,79
    uz_hhl(kk,:,:)  = 0.5*(uz(kk,:,:) + uz(kk+1,:,:))*scale_uz
  end do
@@ -162,31 +175,31 @@ begin
 ;-------------------------------------------------------------------------------------
  if (fstrack) then
 
-   wfac = 0.15   ;fraction of extent for search area
-   wss  = 0.4    ;SW fraction
-   wse  = 1.+wss ;NE fraction
+ wfac = 0.15   ;fraction of extent for search area
+ wss  = 0.4    ;SW fraction
+ wse  = 1.+wss ;NE fraction
 
-   ;Find location where W is maximum ....
-   if (fn.eq.fns) then
-     glatlon = storm_tracker_nclf(uz_hhl,lat,lon,wfac,wss,wse,ext,mpcorner)
-   else
-     glatlon = storm_tracker_nclf(uz_hhl,lat,lon,wfac,wss,wse,ext,mpcornerw)
-   end if
-   glat_id    = glatlon(0)
-   glon_id    = glatlon(1)
+ ;Find location where W is maximum ....
+ if (fn.eq.fns) then
+   glatlon = storm_tracker_nclf(uz_hhl,lat,lon,wfac,wss,wse,ext,mpcorner)
+ else
+   glatlon = storm_tracker_nclf(uz_hhl,lat,lon,wfac,wss,wse,ext,mpcornerw)
+ end if
+ glat_id    = glatlon(0)
+ glon_id    = glatlon(1) 
 
-   print("Cross-section through " + glon_id)
+ print("Cross-section through " + glon_id)
 
-   print("Updating mpcorner and mpcornerw")
-   mpcorner   = (/glat_id-wss*ext(0)     ,glon_id-wss*ext(1)     ,glat_id+wse*ext(0)     ,glon_id+wse*ext(1)/)
-   mpcornerw  = (/glat_id-wss*wfac*ext(0),glon_id-wss*wfac*ext(1),glat_id+wse*wfac*ext(0),glon_id+wse*wfac*ext(1)/)
+ print("Updating mpcorner and mpcornerw")
+ mpcorner   = (/glat_id-wss*ext(0)     ,glon_id-wss*ext(1)     ,glat_id+wse*ext(0)     ,glon_id+wse*ext(1)/)
+ mpcornerw  = (/glat_id-wss*wfac*ext(0),glon_id-wss*wfac*ext(1),glat_id+wse*wfac*ext(0),glon_id+wse*wfac*ext(1)/)
 
  else
-   glat_id = glat_idB(0)
-   glon_id = glon_idB(0)
+ glat_id = glat_idB
+ glon_id = glon_idB
  end if
 ;-----------------------------------------------------------------------------------------
-;#6 DERIVE POLARIMETRIC VARIABLES
+;#6 DERIVE HYDROMETEORS 
 ;-------------------------------------------------------------------------------------
 
 ; Compute ambient air density 
@@ -199,65 +212,40 @@ begin
  tlc           = qc + qr + qi + qs + qg + qh    ;Precipitation loading
  rho           = calc_rho_nclf(tair,pressure,qv,tlc) ;air density (kgm-3)
 
-;;;;;;;;;;
- diri_input   = diri_dBz + "/input"
- diri_output  = diri_dBz + "/output"
+ nh           = dimsizes(hydrometeors)
+ varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
+ varh@units   = hydunits
+ varh@long_name = hydname
+ varh@_FillValue = -999.
+ do ih = 0, nh-1
+   if (opt.eq.0) then
+     varh(ih,:,:,:) = (/nc_cos->$(hydrometeors_qn(ih))$(0,::-1,:,:)/)
+     varh(ih,:,:,:) = (/scale_varh * varh(ih,:,:,:) * rho/)    ;(kg-1) to (L-1)
+           ;Nt    = 1/1000. * Nd * rho            ; number density to number concentration
+   else if (opt.eq.1) then
+     varh(ih,:,:,:) = (/nc_cos->$(hydrometeors_qx(ih))$(0,::-1,:,:)/)
+     varh(ih,:,:,:) = (/scale_varh * varh(ih,:,:,:) * rho/)    ;(kg/kg) to (g/m3)
+           ;Qt    = 1000. * Qd * rho
+   else if (opt.eq.2) then
+     qtemp      = (/nc_cos->$(hydrometeors_qx(ih))$(0,::-1,:,:)/)
+     Ntemp      = (/nc_cos->$(hydrometeors_qn(ih))$(0,::-1,:,:)/)
+     qtemp      = where(qtemp.lt.0.0001, 0., qtemp)
+     Ntemp      = where(Ntemp.eq.0, varh@_FillValue, Ntemp)        
+     xmass      = (/qtemp/Ntemp/)   ; kg
+     ;Clipping
+     xmass      = where(xmass.gt.xmin(ih),xmass,0.)
+     xmass      = where(xmass.gt.xmax(ih),xmax(ih),xmass)
+     ;diameter mass relationship         
+     varh(ih,:,:,:) = (/scale_varh* (a_geo(ih) * (xmass)^b_geo(ih))/)   ;mm
+   end if
+   end if
+   end if
+ end do
 
- fils_var     = systemfunc("ls " + diri_output + "/dbz-tm-1m_*")
- fils_elv     = systemfunc("ls " + diri_input + "/elevation_*")
- fil_lat      = systemfunc("ls " + diri_input + "/lat_*")
- fil_lon      = systemfunc("ls " + diri_input + "/lon_*")
-
- ;Read header information to extract nx,ny,nz
- array = new(3,integer)
- EXT1::readdim(array(0),array(1),array(2),fils_elv(fn-dns))
-
- latPV = new((/1,1,array(1),array(0)/),"float")
- lonPV = new((/1,1,array(1),array(0)/),"float")
- hgtPV = new((/1,array(2),array(1),array(0)/),"float")
- EXT2::readascii(array(0),array(1),1,latPV,1,1,fil_lat)
- EXT2::readascii(array(0),array(1),1,lonPV,1,1,fil_lon)
- EXT2::readascii(array(0),array(1),array(2),hgtPV,1,1,fils_elv(fn-dns))
- 
-
- nh           = dimsizes(polarimetric)
- varh         = new((/nh,array(2),array(1),array(0)/),"float")    ;Initialize variable for plotting
- varh@_FillValue = -99
- varPV        = new((/8,array(2),array(1),array(0)/),"float")
- varPV@_FillValue = -99
- fname        = fils_var(fn-dns) 
- print(" " + fname)
- ;print("WARNING >>>>")
-
- EXT2::readascii(array(0),array(1),array(2),varPV,8,1,fname)
- varh(0,:,:,:) = varPV(1,::-1,:,:)
- varh(1,:,:,:) = varPV(2,::-1,:,:)
- varh(2,:,:,:) = varPV(3,::-1,:,:)
- varh(3,:,:,:) = varPV(4,::-1,:,:)
-
- Zh  = varh(0,:,:,:)
- Zv  = varh(1,:,:,:)
- KDP = varh(2,:,:,:)
- RHV = varh(3,:,:,:)
- varh(1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv) 
- varh(2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
- varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
- delete([/Zh, Zv, KDP, RHV/])
 
 ;-------------------------------------------------------------------------------
 ;#7 Crop data and vertical plane for interpolation
 ;-------------------------------------------------------------------------------
- nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
- sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
- eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
- ;change of reference from model to radar domain
- jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
-
- print("Check if the radar corners are correctly extracted ...")
- print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
- print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
-
-
   ji      = region_ind (lat,lon, mpcorner(0),mpcorner(2),mpcorner(1),mpcorner(3))
   ngrid   = ji(1)-ji(0)+1
   print("ny extent : " + ngrid)
@@ -285,11 +273,9 @@ begin
     ji(2) = ji(3) - ngrid + 1
     print("X-Boundary reached ...")
   end if
-  jiv   = (/ji(0)-jinv(0),ji(1)-jinv(0),ji(2)-jinv(2),ji(3)-jinv(2)/) + 1
 
-  print("Crop indices ...")
+  print("Crop indices ")
   print(" " + ji)
-
  
   lat_c    = lat(ji(0):ji(1),ji(2):ji(3))
   lon_c    = lon(ji(0):ji(1),ji(2):ji(3))
@@ -302,6 +288,9 @@ begin
   ; Obtain the radar line of view
   Ipangle = Ipangles(prom-1)
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
+  ;;CPS
+  plane(1) = plane(1) + offs
+
   glon_p = plane@X
   glat_p = plane@Y
 
@@ -320,12 +309,11 @@ begin
   ux_c        = ux(:,ji(0):ji(1),ji(2):ji(3))
   uy_c        = uy(:,ji(0):ji(1),ji(2):ji(3))
   uz_hhl_c    = uz_hhl(:,ji(0):ji(1),ji(2):ji(3))
-  ;print(jiv)
-  varh_c      = varh(:,:,jiv(0):jiv(1),jiv(2):jiv(3))
+  varh_c      = varh(:,:,ji(0):ji(1),ji(2):ji(3))
   prec_c      = tot_prec(ji(0):ji(1),ji(2):ji(3))
   hail_c      = hail_gsp(ji(0):ji(1),ji(2):ji(3))
 
-  vx_c        = varh_c(0,:,:,:)             ;total hydrometeor 
+  vx_c        = varh_c(ixp, :, :,:) ;dim_sum_n(varh_c,0)             ;total hydrometeor 
   ; Set precip to zero for fn=0
   if (fn.eq.fns) then
     prec_c = 0.
@@ -346,14 +334,13 @@ begin
   uy_plane    = (/wrf_user_intrp3d(uy_c,zmodelc,"v",plane,Ipangle,iopt)/)
   uz_plane    = (/wrf_user_intrp3d(uz_hhl_c,zmodelc,"v",plane,Ipangle,iopt)/)
   ndimp       = dimsizes(tc_plane)
+
+  print(max(uz_plane) + "U Z MAX")
+  exit
   varh_plane    = new((/nh,ndimp(0),ndimp(1)/),"float")
   do ih = 0, nh-1
-    varh_plane(ih,:,:)    = wrf_user_intrp3d(varh_c(ih,:,:,:),zmodelc,"v",plane,Ipangle,iopt)
+    varh_plane(ih,:,:)    = (/wrf_user_intrp3d(varh_c(ih,:,:,:),zmodelc,"v",plane,Ipangle,iopt)/)
   end do
-  v1_plane   = (/varh_plane(0,:,:)/)
-  v2_plane   = (/varh_plane(1,:,:)/)
-  v3_plane   = (/varh_plane(2,:,:)/)
-  v4_plane   = (/varh_plane(3,:,:)/)
 
 ; Compute perturbation for THETAE to diagnose cold pool
   nplane     = dimsizes(te_plane)
@@ -369,7 +356,7 @@ begin
     end if
   end do
 ;
-  x_plane               = lat_plane
+  x_plane               = lat_plane ;lon_plane
 
   tc_plane!0            = "height"
   tc_plane!1            = "longitude" 
@@ -383,29 +370,11 @@ begin
   te_plane@long_name    = "THETAE'"
   te_plane@units        = "C"
 
-  v1_plane!0            = "height"
-  v1_plane!1            = "longitude" 
-  v1_plane&longitude    = (/x_plane/)
-  v1_plane@long_name    = polarimetric(0)
-  v1_plane@units        = punits(0)
-
-  v2_plane!0            = "height"
-  v2_plane!1            = "longitude" 
-  v2_plane&longitude    = (/x_plane/)
-  v2_plane@long_name    = polarimetric(0) 
-  v2_plane@units        = punits(0)
-
-  v3_plane!0            = "height"
-  v3_plane!1            = "longitude" 
-  v3_plane&longitude    = (/x_plane/)
-  v3_plane@long_name    = polarimetric(0) 
-  v3_plane@units        = punits(0)
-
-  v4_plane!0            = "height"
-  v4_plane!1            = "longitude" 
-  v4_plane&longitude    = (/x_plane/)
-  v4_plane@long_name    = polarimetric(0) 
-  v4_plane@units        = punits(0)
+  varh_plane!1            = "height"
+  varh_plane!2            = "longitude" 
+  varh_plane&longitude    = (/x_plane/)
+  varh_plane@long_name    = hydname 
+  varh_plane@units        = hydunits
 
   ux_plane!0         = "height"
   ux_plane!1         = "longitude" 
@@ -431,19 +400,15 @@ begin
     sloc0 = sloc-1
     sloc1 = sloc+1
     tc_v = dim_avg_n(tc_plane(0:hloc,sloc0:sloc1),1)
-    v1_v = dim_avg_n(v1_plane(0:hloc,sloc0:sloc1),1)
-    v2_v = dim_avg_n(v2_plane(0:hloc,sloc0:sloc1),1)
-    v3_v = dim_avg_n(v3_plane(0:hloc,sloc0:sloc1),1)
-    v4_v = dim_avg_n(v4_plane(0:hloc,sloc0:sloc1),1)
+    varh_v = dim_avg_n(varh_plane(:,0:hloc,sloc0:sloc1),2)
     ux_v = dim_avg_n(ux_plane(0:hloc,sloc0:sloc1),1)
     uy_v = dim_avg_n(uy_plane(0:hloc,sloc0:sloc1),1)
     uz_v = dim_avg_n(uz_plane(0:hloc,sloc0:sloc1),1)
 
     ;For correct profile plot
-    v1_v = mask(v1_v,v1_v.eq.0,False)
-    v2_v = mask(v2_v,v2_v.eq.0,False)
-    v3_v = mask(v3_v,v3_v.eq.0,False)
-    v4_v = mask(v4_v,v4_v.eq.0,False)
+    do ih = 0, nh-1
+      varh_v(ih,:) = mask(varh_v(ih,:),varh_v(ih,:).eq.0, False)
+    end do 
  
 ;-------------------------------------------------------------------------------
 ;#10 Interpolate Cropped Data in horizontal at fixed pressure
@@ -494,16 +459,16 @@ begin
     Band6@_longname = "UZ-track"
   end if
 
-  latout(fn-fns,:,:) = lat_c
-  lonout(fn-fns,:,:) = lon_c
-  Band1(fn-fns,:,:) = prec_c
-  Band2(fn-fns,:,:) = hail_c
-  Band3(0,fn-fns,:,:) = wx_p1
-  Band3(1,fn-fns,:,:) = wx_p2
-  Band4(fn-fns,:,:) = te_p
-  Band5(fn-fns,:,:) = qv_p
-  Band6(fn-fns,0)   = glat_id(0)
-  Band6(fn-fns,1)   = glon_id(0) 
+  latout(fn,:,:) = lat_c
+  lonout(fn,:,:) = lon_c
+  Band1(fn,:,:) = prec_c
+  Band2(fn,:,:) = hail_c
+  Band3(0,fn,:,:) = wx_p1
+  Band3(1,fn,:,:) = wx_p2
+  Band4(fn,:,:) = te_p
+  Band5(fn,:,:) = qv_p
+  Band6(fn,0)   = glat_id(0)
+  Band6(fn,1)   = glon_id(0) 
 
   print("Rain " + " " + sum(prec_c) + "  Hail " + sum(hail_c) + " mm")
  
@@ -512,12 +477,10 @@ begin
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
   wks_type = "png"
-  fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
+  fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn) + "_" + ixp
   wks = gsn_open_wks(wks_type,fname_out)
 
-  colors = load_radarColors(0)
-  colors(2) = "white"
-  gsn_define_colormap(wks,colors)
+  gsn_define_colormap(wks,"precip2_17lev")
 
   fncps_no = ":F21:"
   fncps_no = 21
@@ -590,13 +553,15 @@ begin
  res@cnInfoLabelOn              = False   ; Turn off annotations
  res@cnLineLabelsOn             = False
  res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   =  colors@zhh_levs ;ispan(qmin(0), qmax(0),qlev(0))/100.
+ rescs@cnLevels                      = qcnlevs
+; res@cnLevels                   = min(qcnlevs) ;
+ res@cnFillColors               = (/"white","slategrey"/)
 
  ;Labels
  res@lbLabelAutoStride          = True
  res@lbOrientation              = "vertical"
- ;res@lbTitleString              = punits(0) 
- res@lbLabelFontHeightF         = 0.015
+ res@lbTitleString              = hydunits 
+ res@lbLabelFontHeightF         = 0.02
  res@pmLabelBarWidthF           = 0.05
  res@pmLabelBarHeightF          = 0.35
 
@@ -617,7 +582,7 @@ begin
  res@vcGlyphStyle             = "CurlyVector"    ; turn on curly vectors
  res@vcMinDistanceF           = 0.032            ; thin vectors
  res@vcRefAnnoOrthogonalPosF  = -.3             ; move ref vector down
- res@vcLineArrowColor         = "azure3" ;"grey40"
+ res@vcLineArrowColor         = "azure3" ;grey40"
  res@vcLineArrowThicknessF    = 2.
  res@vcGlyphOpacityF          = 0.7
  res@vcRefAnnoOn              = True
@@ -639,9 +604,10 @@ begin
  print("500 hpa" + min(wx_p1) + " " + max(wx_p1))
  print("700 hpa" + min(wx_p2) + " " + max(wx_p2))
  
-
+;CPS
 ; dumw                         = gsn_csm_contour(wks,wx_p1, resw)
 ; overlay(plot(0),dumw)
+
 ; resw@cnLineThicknessF        = 1.5
 ; resw@cnLineColor             = "orange"
 ; dumw1                        = gsn_csm_contour(wks,wx_p2, resw)
@@ -651,8 +617,10 @@ begin
  resw@cnLineThicknessF        = 3.0
  resw@cnLineColor = "blue"
  resw@cnLevels  = ispan(2,10,1)*-1. 
+;CPS
 ; dumw2                        = gsn_csm_contour(wks,wx_p1, resw)
 ; overlay(plot(0),dumw2) 
+
 ; resw@cnLineThicknessF        = 1.5
 ; resw@cnLineColor = "steelblue"
 ; dumw3                        = gsn_csm_contour(wks,wx_p2, resw)
@@ -693,7 +661,7 @@ begin
  dumpl = gsn_add_polyline(wks, plot(0),lon_plane, lat_plane, plres)
 
  plres@gsLineColor             = "red"
- dumxp = gsn_add_polyline(wks, plot(0),(/glon_idB(0),glon_p/), (/glat_idB(0),glat_p/), plres)
+ dumxp = gsn_add_polyline(wks, plot(0),(/glon_idB,glon_p/), (/glat_idB,glat_p/), plres)
 
  txres               = True
  txres@txFont        = fncps_no
@@ -725,18 +693,20 @@ begin
 ;-----------------------------------------------------------------------------------------
  ;Viewport
  rescs@vpXF                          = 0.14
- rescs@vpYF                          = 0.45
- rescs@vpHeightF                     = 0.35
- rescs@vpWidthF                      = 0.7
+ rescs@vpYF                          = 0.48 ;0.45
+ rescs@vpHeightF                     = 0.38   ;0.35
+ rescs@vpWidthF                      = 0.33;   0.4
 
  rescsv = rescs
 
- rescs@gsnLeftString                 = "c-s AA'"
- rescs@gsnRightString                = polarimetric(ipol) + " [" + punits(ipol) + "]"
- rescs@tiXAxisString                 = "Longitude"
+ rescs@gsnLeftString                 = " " ;  "c-s AA'"
+ rescs@gsnRightString                = hydrometeors(ixp) + " ["+hydunits+"]"
+ rescs@tiXAxisString                 = "Longitude" ;"Latitude"
  rescs@tiYAxisString                 = "Height (km)"
 
  rescs@trYMaxF                    = hloc ;80
+ rescs@trXMinF                    = xlon(0) ;50.8
+ rescs@trXMaxF                    = xlon(1) ;51.0
 
  loc_label                        = ispan(11,99,10)
  rescs@tmYLMode                   = "Explicit"
@@ -746,58 +716,60 @@ begin
  ;Label
  rescs@lbLabelAutoStride          = True
  rescs@lbOrientation              = "vertical"
- ;rescs@lbTitleString              = punits(ipol) 
+ ;rescs@lbTitleString              = hydunits 
  rescs@lbLabelFontHeightF         = 0.015
  rescs@pmLabelBarWidthF           = 0.05
- rescs@pmLabelBarHeightF          = 0.35
+ rescs@pmLabelBarHeightF          = rescs@vpHeightF ;0.35
+
 
  ;Contour
- rescs@cnMissingValFillPattern       = 8
- rescs@cnMissingValFillColor         = "black"
- rescs@cnMissingValPerimOn           = True            ;
- rescs@cnMissingValPerimColor        = "black"         ;
- rescs@cnMissingValPerimDashPattern  = 1          ;
- rescs@cnMissingValPerimThicknessF   = 2.0
+ ;rescs@cnMissingValFillPattern       = 8
+ ;rescs@cnMissingValFillColor         = "black"
+ ;rescs@cnMissingValPerimOn           = True            ;
+ ;rescs@cnMissingValPerimColor        = "black"         ;
+ ;rescs@cnMissingValPerimDashPattern  = 1          ;
+ ;rescs@cnMissingValPerimThicknessF   = 2.0
  rescs@cnLevelSelectionMode          = "ExplicitLevels"
 
- ;rescs@cnLevels                      = ispan(qmin(0),qmax(0),qlev(0))/100.
+; Cross-section contour
+ rescs@cnLevels                      = qcnlevs
  rescs@cnFillOn                   = True
+ rescs@cnFillMode                 = "RasterFill"
  rescs@cnLinesOn                  = False
  rescs@cnInfoLabelOn              = False   ; Turn off annotations
  rescs@cnLineLabelsOn             = False
- 
- ;delete(rescs@cnLevels)
-; Cross-section contour
- if (ipol.eq.0) then
-   v_plane = v1_plane
-   v_v     = v1_v
-   rescs@cnLevels  = colors@zhh_levs
- else if (ipol.eq.1) then
-   v_plane = v2_plane
-   v_v     = v2_v
-   rescs@cnLevels  = colors@zdr_levs
- else if (ipol.eq.2) then
-   v_plane = v3_plane
-   v_v     = v3_v
-   rescs@cnLevels  = colors@kdp_levs
- else if (ipol.eq.3) then
-   v_plane = v4_plane
-   v_v     = v4_v
-   rescs@cnLevels  = colors@rho_levs
- end if
- end if
- end if
- end if
- plot(1)                          = gsn_csm_contour(wks, v_plane, rescs)
- delete(rescs@cnLevels)
 
- rescs@cnLevels                   = colors@zhh_levs ;ispan(qmin(0),qmax(0),qlev(0))/100.
- rescs@cnLineThicknessF           = 1.0
+ ;rescs@trXMinF       = min(lat_c)
+ ;rescs@trXMaxF       = max(lat_c)
+ rescs@tiXAxisString = "Latitude"
+ plot(1)                          = gsn_csm_contour(wks, varh_plane(ixp,:,:), rescs)
+ ;plot(1)                          = gsn_csm_contour(wks, uz_plane, rescs)
+
+ if (ixp.eq.4) then
+   rescs@cnFillOn = False
+   rescs@cnLinesOn                  = True 
+   rescs@cnLineThicknessF           = 2.0
+   rescs@cnLineLabelsOn             = True
+   dumhail = gsn_csm_contour(wks, varh_plane(5,:,:), rescs)
+   overlay(plot(1),dumhail)
+ end if
+
+ rescs@cnLineThicknessF           = 2.0
  rescs@cnFillOn                   = False
- rescs@cnLinesOn                  = True
- rescs@cnLineColor                = "black" 
- dumqp                            = gsn_csm_contour(wks, v1_plane, rescs)
- overlay(plot(1),dumqp)
+ rescs@cnLineColor                = hydro_colors(0) 
+ ;overlay(plot(1),dumqp)
+
+ rescs@cnLineColor                = hydro_colors(2)
+ ;overlay(plot(1),dumqp)
+
+ rescs@cnLineColor                = hydro_colors(3) 
+ ;overlay(plot(1),dumqp)
+
+ rescs@cnLineColor                = hydro_colors(4) 
+ ;overlay(plot(1),dumqp)
+
+ rescs@cnLineColor                = hydro_colors(5) 
+ ;overlay(plot(1),dumqp)
 
  ;;Vector overlay along the cross-section
  rescsv@vcRefAnnoFontHeightF     = 0.02
@@ -862,7 +834,7 @@ begin
  ;Add annotation
  txres@txFontHeightF = 0.026
  txres@txBackgroundFillColor = "white"
- gsn_text_ndc(wks,"c)",0.07,0.5,txres) ;
+ ;gsn_text_ndc(wks,"c)",0.07,0.5,txres) ;
 
 ;-----------------------------------------------------------------------------------------
 ;#11c  Sounding Plot Resources
@@ -873,21 +845,44 @@ begin
  resV@vpHeightF                     = 0.35
  resV@vpWidthF                      = 0.22
 
- resV@gsnLeftString                 = polarimetric(ipol)
+ resV@gsnLeftString                 = "Vertical Profile"
  resV@gsnRightString                = ""
 
  resV@xyLineThicknessF              = 3.
 
  resV@tiYAxisString                 = "Height (km)"
- resV@tiXAxisString                 = punits(ipol) 
+ resV@tiXAxisString                 = hydunits 
 
+; resV@tmXBMode                      = "Explicit"
+; resV@tmXBValues                    = ispan(0,9,1)*1.0
+; resV@tmXBLabels                    = ispan(0,9,1)
  resV@tmLabelAutoStride             = True
  resV@tmXBAutoPrecision             = False
- resV@trXMinF                       = qmin(ipol)/100. ;0.0
- resV@trXMaxF                       = qmax(ipol)/100. 
+ resV@trXMinF                       = 0. ;min(qcnlevs) ;qmin ;0.0
+ resV@trXMaxF                       = qprom(prom-1) ;max(qcnlevs) ;qmax 
+ if (opt.eq.0 .or. opt.eq.2) then
+   resV@trXLog                        = True
+ end if
  resV@trYMaxF                       = max(ht_v)
- resV@xyLineColor                   = "black" 
- plot(2)                            = gsn_csm_xy (wks,v_v,ht_v,resV) ; create plot
+ resV@xyLineColor                   = hydro_colors(ixp)
+ plot(2)                            = gsn_csm_xy (wks,varh_v(ixp,:),ht_v,resV) ; create plot
+
+;Add legend
+ lgres                    = True
+ lgres@lgLineColors       = hydro_colors
+ lgres@lgLineThicknessF   = resV@xyLineThicknessF
+ lgres@lgDashIndexes      = hydro_dash
+ lgres@lgItemType         = "Lines"
+ lgres@lgLabelFontHeightF = .1
+ lgres@vpWidthF           = 0.1
+ lgres@vpHeightF          = 0.18
+ lgres@lgPerimOn          = False
+ lbid = gsn_create_legend(wks,6,hydrometeors,lgres)
+
+ amres = True
+ amres@amParallelPosF   = 0.2
+ amres@amOrthogonalPosF = -0.15
+ annoid1 = gsn_add_annotation(plot(2),lbid,amres)
 
  ;Add annotation
  txres@txFontHeightF = 0.026
@@ -899,7 +894,7 @@ begin
  circ_lat = new(ncirc,float)               ; Create arrays to hold circle.
  circ_lon = new(ncirc,float)
  raddeg   = extB ;
- nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
 
  lnres                  = True
  lnres@gsLineColor      = "black"
@@ -908,22 +903,22 @@ begin
  line_id1 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
  raddeg   = extB/2. ;
- nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
 
  line_id2 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
  raddeg   = extB/4. ;
- nggcog(glat_idB(0),glon_idB(0),raddeg,circ_lat,circ_lon)
+ nggcog(glat_idB,glon_idB,raddeg,circ_lat,circ_lon)
 
  line_id3 = gsn_add_polyline(wks, plot(0), circ_lon, circ_lat, lnres)
 
 ; Draw cross hair
  dumch = new(2,"graphic")
- ply   = (/glat_idB(0) ,glat_idB(0)/)
+ ply   = (/glat_idB ,glat_idB/)
  plx   = (/min(lon), max(lon)/)
  dumch(0) = gsn_add_polyline(wks, plot(0), plx, ply, lnres)
 
- plx = (/glon_idB(0) ,glon_idB(0)/)
+ plx = (/glon_idB ,glon_idB/)
  ply = (/min(lat), max(lat)/)
  dumch(1) = gsn_add_polyline(wks, plot(0), plx, ply, lnres)
 
@@ -944,8 +939,7 @@ begin
  delete([/vx_c, tlc_c, te_c, th_c, tk_c, qv_c, ps_c, ux_c, uy_c, uz_hhl_c, varh_c/])
  delete([/tlc,te_p, qv_p,ux_p, uy_p, vx_p, wx_p1, wx_p2/])
  delete([/x_plane,te_plane,tc_plane,ux_plane,uy_plane,uz_plane/])
- delete([/v_plane,v1_plane,v2_plane,v3_plane,v4_plane/])
- delete([/vr_sum, ht_v, v_v, v1_v, v2_v, v3_v, v4_v/])
+ delete([/vr_sum, ht_v/])
  delete([/ux_v, uy_v, uz_v/])
  delete([/ux_plane_c, uz_plane_c/])
 
@@ -956,6 +950,7 @@ begin
 ;---------------------------------------------------------------------------------------
  dataout = False
  if (dataout) then
+
  fnamenc = itype_gscp + "_" + inst + ".nc"
  system("rm " + fnamenc)
 

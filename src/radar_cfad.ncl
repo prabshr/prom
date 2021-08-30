@@ -12,11 +12,12 @@ load "$PROM/functions/cfads.ncl"
 load "$PROM/functions/read_radarnc.ncl"
 load "$PROM/functions/load_cfadColors.ncl"
 
-function record_append(fns,fne,fils_var,vid,glon_idB,glat_idB)
+function record_append(fns,fne,fils_var,vid,glon_idB,glat_idB,amask)
  begin
  do nf = fns,fne
    fname = fils_var(nf)
    vara  = read_radarnc(fname,vid, glon_idB,glat_idB)
+   vara  = mask(vara,amask(nf,:,:).eq.1, True)
    if (nf.eq.fns) then
      ndim = dimsizes(vara)
      var  = new((/fne-fns+1,ndim(0),ndim(1),ndim(2)/),typeof(vara))
@@ -24,10 +25,12 @@ function record_append(fns,fne,fils_var,vid,glon_idB,glat_idB)
    end if
    var(nf-fns,:,:,:) = vara
  end do
- print("Cropping data................")
- varc = var(:,:,:,0:199)
- delete(var)
- var  = varc
+
+ ;fname = "temp_" + vid + ".nc"
+ ;system("rm " + fname)
+ ;fout = addfile(fname,"c")
+ ;fout->Band1 = var
+ ;
  return(var)
 end
 
@@ -36,16 +39,30 @@ begin
 
 ;User Settings
 ;---------------------------------------------------------------------------
- ydate        = "20150705"
- diri         = "/daten01/z4/database/PROM/" + ydate + "/GRIDS/"
- fn           = 18  ;15:30 UTC  ;17
- fns          = fn  - 9 
- fne          = fn  + 2
+ ;pid       = 2 
+ ydates    = (/"20150705","20160513","20170706"/)
+ fnp       = (/18, 18, 12/)
+ fnsp      = (/ 9, 14, 10/)
+ fnep      = (/18, 23, 13/)
+
+ ydate     = ydates(pid)
+ radar     = "BoXPol"
+ diri      = "/daten01/z4/database/PROM/" + ydate + "/" + radar + "/GRIDS/"
+ fn        = fnp(pid) ;15:30 UTC  ;17
+ fns       = fnsp(pid)
+ fne       = fnep(pid)
 
  wks_type     = "png"
 
  glon_idB    = 7.071663 ; Bonn Radar
  glat_idB    = 50.73052 ;
+
+;Read mask
+;---------------------------------------------------------------------------
+ cid        = pid + 1
+ filmask    = "$PROM/scratch/data_prom" + cid +"/" + "debug_" + radar + ".nc"
+ nc_mask    = addfile(filmask,"r")
+ cmask      = nc_mask->Band2
 
 ;Read netcdf files
 ;---------------------------------------------------------------------------
@@ -54,7 +71,7 @@ begin
  ndimf        = dimsizes(fils_var)
 
  vid = 0
- var =  record_append(fns,fne,fils_var,vid,glon_idB,glat_idB)
+ var =  record_append(fns,fne,fils_var,vid,glon_idB,glat_idB,cmask)
 
 ; CFAD plot parameters
 ;--------------------------------------------------------
@@ -73,17 +90,17 @@ begin
 
  vid      = 1
  opt@vid  = vid
- var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB)
+ var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB,cmask)
  zdr_cfad = cfads(var&Z,var,minv(vid),maxv(vid),binw(vid),var@long_name,var@units,opt@YH95)
 
  vid      = 2
  opt@vid  = vid 
- var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB)
+ var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB,cmask)
  kdp_cfad = cfads(var&Z,var,minv(vid),maxv(vid),binw(vid),var@long_name,var@units,opt@YH95)
 
  vid      = 3
  opt@vid  = vid
- var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB)
+ var =  record_append(fns,fne,fils_var,opt@vid,glon_idB,glat_idB,cmask)
  rho_cfad = cfads(var&Z,var,minv(vid),maxv(vid),binw(vid),var@long_name,var@units,opt@YH95)
 
 
@@ -236,7 +253,7 @@ begin
  resP = True
  resP@gsnMaximize    = True
  resP@gsnPanelXF = (/-1,0.28,0.51,0.74/)
- resP@gsnPanelDebug = True
+ ;resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/1,4/), resP)
 
 end

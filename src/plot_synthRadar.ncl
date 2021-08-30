@@ -12,46 +12,52 @@ external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
 begin
- ;inst        = ;
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_" + inst +"/"
+ ;pid       = 1 
+ ydates    = (/"20150705","20160513","20170706"/)
+ insts     = (/6, 8, 11/)
+ fns       = (/11,15,18/)
+ ixs       = (/90,124,95/)
+ lat_exts  = (/51.2, 50.8, 51./)
+ lat_exts0 = (/40.0, 40.0, 50.42/)
+
+;SPP proposal
+; insts     = (/5, -1, -1/)
+; fns       = (/21,-1,-1/)
+; ixs       = (/184,-1,-1/) - 65
+; lat_exts  = (/51.6, -1, -1/)
+ ;----
+
+ lat_ext0  = lat_exts0(pid)
+ lat_ext   = lat_exts(pid)
+ fn        = fns(pid)
+ ix        = ixs(pid)
+ inst      = insts(pid)
+ ydate     = ydates(pid)
+
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_" + ydate + "/Synth/HET2483_" + inst +"/"
  pvars       = (/"Z~B~H~N~","Z~B~DR~N~","K~B~DP~N~","~F8~r~B~~F10~hv~E~"/)
  punits      = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
- izlevs      = (/25, 44, 54/) 
-
- glon_idB    = 7.071663 ; Bonn Radar
- glat_idB    = 50.73052 ;
- dlat        = 0.5
- dlon        = 0.5
-
- if (inst.eq.9) then
-   mpc         = (/50. + 35./60., 7., 51. + 30./60., 8. + 0./60./)
-;   ix          = 125
-;   fn          = 18
- end if
- if (inst.eq.8) then
-   mpc         = (/50. + 30./60., 6. + 45./60. , 51. + 5./60., 7. + 30./60./)
-;   ix          = 89
- end if
- if (inst.eq.7) then
-   mpc         = (/50. + 35./60., 6. + 50./60. , 51. + 5./60., 7. + 20./60./)
-;   ix          = 88
- end if
- if (inst.eq.6) then
-   mpc         = (/50. + 40./60., 6. + 50./60., 51. + 15./60., 7. + 30./60./)
-   ix          = 90   ;location for X-cross-section
-   fn          = 11 ;10
-   lat_ext     = 51.2
- end if
- if (inst.eq.5) then
-    mpc         = (/50. + 40./60., 7. , 51. + 15./60., 7. + 40./60./)
-;    ix = 96   ;102
-;    fn = 18   ;17 
- end if
-
-; mpc  = (/glat_idB - dlat, glon_idB - dlon, glat_idB + dlat, glon_idB + dlon/)
 
  frhi        = True ;replace 3rd level ppi with rhi
- ;fn          = 15;8;20    ;file to read
+ glon_idB    = 7.071663 ; Bonn Radar
+ glat_idB    = 50.73052 ;
+ dlat        = 1.0 ;0.5
+ dlon        = 1.0 ; 0.5
+
+ if (pid.eq.0) then
+   mpc  = (/50. + 40./60., 6. + 50./60., 51. + 15./60., 7. + 30./60./)
+   izlevs      = (/25, 44, 54/)
+ else if (pid.eq.1) then
+   mpc  = (/50. + 10./60., 7. + 0./60., 51. + 0./60., 8. + 0./60./) 
+   izlevs      = (/25, 41, 54/)
+ else if (pid.eq.2) then
+   mpc  = (/50. + 5./60., 6. + 40./60., 51. + 0./60., 7. + 50./60./)
+   izlevs      = (/25, 44, 54/)
+ else
+   mpc  = (/glat_idB - dlat, glon_idB - dlon, glat_idB + dlat, glon_idB + dlon/)
+ end if
+ end if
+ end if
 
 ;;;;;;;;;;
 
@@ -137,7 +143,8 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_i" + inst + "_t" + fn + "_ix" + ix)
+ ppid     = pid + 1
+ wks      = gsn_open_wks("x11", "Figure_case" + ppid + "_i" + inst + "_t" + fn + "_ix" + ix)
 
  colors   = load_radarColors(0)
 
@@ -164,7 +171,6 @@ begin
  res@tmXBLabelFontColor         = "black"
  res@tmYLLabelFontColor         = "black"
  res@tmXBLabelFontThicknessF    = 2.0
- res@tmYLLabelFontThicknessF    = 2.0
 
  ;ti Resources
  ;-----------------
@@ -185,10 +191,10 @@ begin
  ;----------------------
 
  res@mpLimitMode                  = "Corners"           ; method to zoom
- res@mpLeftCornerLatF             = mpc(0) ;50.5 ;min(lat_c) ;mpcorner(0) ;28; lat(0,0)
- res@mpLeftCornerLonF             = mpc(1) ;6.5 ;min(lon_c) ;mpcorner(1) ;76 ;lon(0,0)
- res@mpRightCornerLatF            = mpc(2) ;max(lat_c) ;mpcorner(2) ;32 ;lat(ndim(0)-1,ndim(1)-1)
- res@mpRightCornerLonF            = mpc(3) ;8.0 ;max(lon_c) ;mpcorner(3) ;82 ;lon(ndim(0)-1,ndim(1)-1)
+ res@mpLeftCornerLatF             = max((/mpc(0),min(lat_c)/)) 
+ res@mpLeftCornerLonF             = max((/mpc(1),min(lon_c)/))
+ res@mpRightCornerLatF            = min((/mpc(2),max(lat_c)/))
+ res@mpRightCornerLonF            = min((/mpc(3),max(lon_c)/))
  res@mpOutlineOn                  = True
  res@mpOutlineBoundarySets        = "National"
  res@mpDataSetName                = "Earth..4"    ; database for non-USA divisions
@@ -366,17 +372,18 @@ begin
 
       res3@vpWidthF = 0.4
 
-      res3@trXMinF    = mpc(0)
-      res3@trXMaxF    = lat_ext ;mpc(2)
+      res3@trXMinF    = max((/lat_ext0,mpc(0)/))
+      res3@trXMaxF    = lat_ext ;min((/lat_ext,mpc(2)/))
       res3@trYMaxF    = 15.
 
       res3@tmXBMode   = "Explicit"
       res3@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20)) 
       res3@tmXBLabels = tointeger((res3@tmXBValues)*100)/100.
+      res3@tmXBLabelsOn = False
 
       res3@lbOrientation = "Vertical"
 
-      res3@tiXAxisString = "Latitude [~F34~0~F~N]"
+      res3@tiXAxisString = " " ;"Latitude [~F34~0~F~N]"
       if (ipol.eq.0) then
         res3@tmYLLabelsOn = True
         res3@tiYAxisString = "Height [km]"
@@ -420,14 +427,14 @@ begin
 
  gsn_text_ndc(wks,"a)",.05,.77,txres)
  gsn_text_ndc(wks,"b)",.05,.58,txres)
- gsn_text_ndc(wks,"c)",.05,.39,txres)
+ gsn_text_ndc(wks,"c)",.05,.40,txres)  ;0.39
 
 
  resP = True
  resP@gsnMaximize    = True 
  ;resP@gsnPanelXF = (/-1,0.36,0.64,-1,0.36,0.64,-1,0.36,0.64/)
  resP@gsnPanelXF = (/-1,0.26,0.46,.66,-1,0.26,0.46,.66,-1,0.26,0.46,.66/)  ;for 4 columns  
- resP@gsnPanelDebug = True
+ ;resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/nz,npol/), resP)
 
 end

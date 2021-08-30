@@ -10,8 +10,8 @@ external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
 begin
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/"
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
+ ydates    = (/"20150705","20160513","20170706"/)
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid) + "/Synth/"
  itype_gscp  = "HET2483"
  pvars       = (/"Z~B~H~N~","Z~B~DR~N~","K~B~DP~N~","~F8~r~B~~F10~hv~E~"/)
  punits      = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
@@ -150,8 +150,8 @@ begin
  ;mp Resources
  ;----------------------
  res@mpLimitMode                  = "Corners"           ; method to zoom
- res@mpLeftCornerLatF             = 50.5 ;min(lat_c) ;mpcorner(0) ;28; lat(0,0)
- res@mpLeftCornerLonF             = 6.5 ;min(lon_c) ;mpcorner(1) ;76 ;lon(0,0)
+ res@mpLeftCornerLatF             = min(lat_c) ;mpcorner(0) ;28; lat(0,0)
+ res@mpLeftCornerLonF             = min(lon_c) ;mpcorner(1) ;76 ;lon(0,0)
  res@mpRightCornerLatF            = max(lat_c) ;mpcorner(2) ;32 ;lat(ndim(0)-1,ndim(1)-1)
  res@mpRightCornerLonF            = max(lon_c) ;mpcorner(3) ;82 ;lon(ndim(0)-1,ndim(1)-1)
  res@mpOutlineOn                  = True

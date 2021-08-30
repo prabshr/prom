@@ -11,9 +11,9 @@ begin
 
  ;Bin for CFADS
  ;Zh, Zdr, Kdp, Rhv
- binw   = (/ 5.0, 0.25,   0.25,   0.05/)
+ binw   = (/ 5.0, 0.25,   0.25,  0.01/)
  minv   = (/-10.,  -1.,  -1.0,   0.7 /)
- maxv   = (/ 70.,   7.,   7.,    1.1 /)
+ maxv   = (/ 70.,   7.,   7.,    1.01 /)
  
  rgb = namedcolor2rgb(colors)
  ;write_matrix(rgb,"3f5.2",0)

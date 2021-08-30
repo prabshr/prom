@@ -12,16 +12,16 @@ external EXT2 "$prom_root/functions/readascii.so"
 
 begin
 ; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/"
-; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20170706/Synth/"
- diri_dBz    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth_track/"
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
+; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20170706/Synth/"
+; diri_dBz    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth_track/"
 
  expid        = "HET2483"
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
  iz          = 34 ;21(low level) ; 47(mid level) , 41? ;model level to plot
  dbz_th      = 40.  ;dBZ
- dbz_min     = -5.  ;dBZ
+ dbz_min     =  0.  ; -5.  ;dBZ
 ;;;;;;;;;;
  fn0         = 0 ; use only 1 elevation file
 
@@ -58,6 +58,7 @@ begin
  varh@_FillValue = -99
  varPV        = new((/8,array(2),array(1),array(0)/),"float")
  varPV@_FillValue = -99
+ varD         = new((/nfils,array(1),array(0)/),"float")
  
  do fn = 0, nfils - 1    ;BIG LOOP 
    fname        = fils_var(fn)
@@ -73,11 +74,19 @@ begin
      varh(fn) = carea/tarea
    end if
    tvar(fn) = tarea
+   varD(fn,:,:) = Zh(iz,:,:)
    delete([/Zh, val1d/]) 
    print("Convective area fraction " + carea + " " + tarea)
  end do
 
 
+ ;Debug output
+ ;fdname = "debug_model_" + inst + ".nc"
+ ;system("rm " + fdname)
+ ;fout = addfile(fdname,"c")
+ ;fout->Band1 = varD
+
+ ;CAF output
  varh@model_level = iz
  varh@model_height = avghgt
 
