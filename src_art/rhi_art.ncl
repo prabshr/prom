@@ -1,4 +1,4 @@
-;Plot the c-s veiw of hydrometeors alond Y-axis
+;Plot the c-s veiw of tracers along Y-axis
 ; specified model grid in X using linearized 
 
 ;P. Shrestha
@@ -6,10 +6,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
-load "$PROM/functions/shade_terrain.ncl"
-load "$PROM/functions/cosmo_time_nclf.ncl"
-load "$PROM/functions/calc_rho_nclf.ncl"
-load "$PROM/functions/convol.ncl"
+load "$prom_root/functions/shade_terrain.ncl"
+load "$prom_root/functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
+load "$prom_root/functions/convol.ncl"
 
 
 begin
@@ -17,22 +17,24 @@ begin
 ;-----------------------------------------------------------------------------------------
  pid       = 0
  ydates    = (/"20150705","20160513","20170706"/)
-
+ lndcov    = (/"HET","HET","HET"/)
  insts     = (/6, 8, 11/)
- fns       = (/1,34,18/)
- ixs       = (/90,124,95/) + 65  ;Need to add offset due to clipping of radar
+ fns       = (/36,34,18/) 
+ ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
+ ixs       = (/60,124,95/) + 65  ;stack emission 
 
  lat_ext1  = (/51.2, 50.8, 51./)
- lat_ext0 = (/50.0+40./60.,50.+10./60.,50.42/)
+ lat_ext0 = (/50.0+48./60.,50.+10./60.,50.42/)
 
- diri      = "/daten04/pshrestha/shared-data/ART/"
+ diri      = "/p/largedata/hbn33/shrestha1/"
+; diri      = "/daten04/pshrestha/shared-data/"
 
- diri_cos  = diri 
- diri_cosI = diri 
+ diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/" 
+ diri_cosI = diri_cos + "/ivr/" 
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
- tracers = (/"NO","SO2","ETH","VSOOT"/)
+ tracers = (/"NO","SO2","VANTHA","VSOOT"/)
 
 ;STEP 3  READ NC FILES
 ;-------------------------------------------------------------------------------------
@@ -125,7 +127,7 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_QX_rhi_"+pid)
+ wks      = gsn_open_wks("png", "Figure_QX_rhi_"+pid + "_" + str_time)
 
  cmap = read_colormap_file("cmp_flux")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -179,7 +181,7 @@ begin
  ;--------------------
  res@trXMinF    = lat_ext0(pid)
  res@trXMaxF    = lat_ext1(pid)
- res@trYMaxF    = 5.
+ res@trYMaxF    = 3.
 
  ;For vector plots
  resu  = res

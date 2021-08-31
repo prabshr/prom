@@ -1,15 +1,44 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$PROM/functions/phirot2phi_nclf.ncl"
-load "$PROM/functions/shapefile_utils.ncl"
+load "$prom_root/functions/phirot2phi_nclf.ncl"
+load "$prom_root/functions/shapefile_utils.ncl"
+load "$prom_root/functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/extract_atmwater_nclf.ncl"
+
+;Plot either AP tracers or vertically integrated water
+
 begin
 
- diri    = "/daten04/pshrestha/shared-data/ART/"
+;STEP 1 User Settings
+;-----------------------------------------------------------------------------------------
+ pid       = 0
+ ydates    = (/"20150705","20160513","20170706"/)
+ lndcov    = (/"HET","HET","HET"/)
+ insts     = (/6, 8, 11/)
+ fns       = (/36,34,18/) 
+ ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
+ ;ixs       = (/60,124,95/) + 65 ;Stack emission
 
- fil     = diri + "lfff00080000.nc"
- fil_sva = diri + "lfff00000000c.nc"
- shp_fil = "/daten01/z4/database/TestCases/bonnRadar/shape_map/vect_map.shp" 
+ ftracer   = True 
+;Tracer
+ ilev      = 70
+ varname   = "NO"
+
+;Vertically integrated water
+ opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
+ nbdl    = 35
+
+ fstream   = False
+ shp_fil   = "/daten01/z4/database/TestCases/bonnRadar/shape_map/vect_map.shp"
+ fcountry  = False
+
+
+ diri      = "/p/largedata/hbn33/shrestha1/"
+; diri      = "/daten04/pshrestha/shared-data/"
+
+ diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/"
+ diri_cosI = diri_cos + "/ivr/"
 
  ;Bonn Radar
  lonc        = 7.071663; N
@@ -17,25 +46,38 @@ begin
 
 ; Read Variables
 ;-----------------------------------------------------------------------
- nc_sva     = addfile(fil_sva,"r")
- lon2d      = nc_sva->lon
- lat2d      = nc_sva->lat
- rotpole    = nc_sva->rotated_pole
-
- topo       = nc_sva->HSURF(0,:,:)
+ fil_ivr    = diri_cosI + "lfff00000000c.nc"
+ nc_cosI    = addfile(fil_ivr,"r")
+ lon2d      = nc_cosI->lon
+ lat2d      = nc_cosI->lat
+ rotpole    = nc_cosI->rotated_pole
+ topo       = nc_cosI->HSURF(0,:,:)
  
- nc_fil = addfile(fil,"r")
- tracer = nc_fil->$varname$(0,79,:,:)
- tracer@lat2d = lat2d
- tracer@lon2d = lon2d
+ fils_cos  = systemfunc("ls " + diri_cos + "lf*")
+
+ nc_cos    = addfile(fils_cos(fns(pid)),"r")
+ time      = nc_cos->time
+ ;
+ str_time  = cosmo_time_nclf(time,1)  ; 0 for date
+ print("Processing ..." + fns(pid) + "  " + str_time)
+
+ if (ftracer) then
+   ;Extract Tracers 
+   tracer = nc_cos->$varname$(0,ilev,:,:)
+   tracer@lat2d = lat2d
+   tracer@lon2d = lon2d
+ else
+   tracer = extract_atmwater_nclf(fils_cos(fns(pid)),fil_ivr,nbdl,opt)
+ end if
 
  vmin = min(tracer)
  vmax = max(tracer)
 
 ;Need to read shape file and convert rotated grids into geographical grids
 ;-----------------------------------------------------------------------
- pollat=39.0
- pollon=-173.0
+ if (fstream) then
+ pollon= 180.0 + rotpole@grid_north_pole_longitude      
+ pollat= 90. - rotpole@grid_north_pole_latitude
  print_shapefile_info(shp_fil)
  shp_xy    = addfile(shp_fil,"r")
  geo_dims  = getfilevardimsizes(shp_xy,"x")
@@ -50,6 +92,9 @@ begin
    lon_strm(ist) = phirot2phi_nclf(y_strm(ist), x_strm(ist), pollat, pollon, 0.0, 1)
    lat_strm(ist) = phirot2phi_nclf(y_strm(ist), x_strm(ist), pollat, pollon, 0.0, 0)
  end do
+
+ end if
+
 
 ; Extract parameters
  ndim = dimsizes(lat2d)
@@ -81,8 +126,8 @@ begin
 
  ;vp Resources
  ;-----------------------
- res@vpWidthF                   = 0.77
- res@vpHeightF                  = 0.77
+ res@vpWidthF                   = 0.7
+ res@vpHeightF                  = 0.7
  res@vpXF                       = 0.1
  res@vpYF                       = 0.92;5
 
@@ -140,14 +185,14 @@ begin
  res@cnLineColor               = "black"
  res@cnSmoothingOn             = True
  res@cnSmoothingDistanceF      = .0003
+ res@cnLevelSelectionMode    = "ExplicitLevels"
+ res@cnLevels                  = (/100./)*1.0
+
 
 ;mp Resources
 ;--------------------
-
- res@mpCenterLonF              = rotpole@grid_north_pole_longitude           ;lon of centre of map projection system
- res@mpCenterLatF              = 90.0 +  rotpole@grid_north_pole_latitude         ;lat of centre of map projection system
-
- print(lon2d@Longitude_of_southern_pole   + " " + lat2d@Latitude_of_southern_pole  )
+ res@mpCenterLonF              = 180.0 + rotpole@grid_north_pole_longitude           ;lon of centre of map projection system
+ res@mpCenterLatF              = 90.0 - rotpole@grid_north_pole_latitude    ;lat of centre of map projection system
 
  res@mpLimitMode               = "LatLon"
  res@mpMinLatF          = lat2d(0,0)
@@ -208,11 +253,15 @@ begin
 ;
 ; Streams
 ;------------------
+ if (fstream) then
  pres@gsLineColor      = "blue" ;steel blue"
  pres@gsLineThicknessF = 6.0
  pres@gsLineOpacityF   = 0.6
  pres@gsSegments       = seg_strm
  poly2 = gsn_add_polyline(wks,plot,lon_strm,lat_strm,pres)
+
+ end if
+
 
  txres@txFontHeightF = tfncps_hgt;0.025
  txres@txFont = fncps_no
@@ -220,6 +269,7 @@ begin
 ; gsn_text_ndc(wks,figno(figid)+")",0.15,0.97,txres) ;
 
 
+ if (fcountry) then
  ;country
  deu = "/Users/pshrestha/data/shapefiles/gadm36_DEU_shp/gadm36_DEU_0.shp"
  bel = "/Users/pshrestha/data/shapefiles/gadm36_BEL_shp/gadm36_BEL_0.shp"
@@ -229,6 +279,8 @@ begin
 
  ;states
  nlds  = "/Users/pshrestha/data/shapefiles/gadm36_DEU_shp/gadm36_DEU_1.shp"
+
+ end if
 
 ;Bonn Radar Extent
 ;-----------------------------------------------------------------------
@@ -245,6 +297,8 @@ begin
 
  ;;
 
+ if (fcountry) then
+
  ppres             = True
  ;ppres@gsLineDashPattern = 16
  ppres@gsLineThicknessF = 6.0
@@ -257,6 +311,18 @@ begin
  poly02 = gsn_add_shapefile_polylines(wks,plot,fra,ppres)
  poly03 = gsn_add_shapefile_polylines(wks,plot,lux,ppres)
  poly04 = gsn_add_shapefile_polylines(wks,plot,nld,ppres)
+
+ end if
+
+ ;Add cross-section
+
+ ppres                    = True
+ ppres@gsLineColor        = "gray3"
+ ppres@gsLineDashPattern  = 3
+ ppres@gsLineThicknessF   = 1.0
+ xx   = (/lon2d(0,ixs(pid)),lon2d(ndim(0)-1,ixs(pid))/)
+ yy   = (/lat2d(0,ixs(pid)),lat2d(ndim(0)-1,ixs(pid))/)
+ csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
 
 
  ;

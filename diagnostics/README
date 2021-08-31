@@ -2,7 +2,8 @@ Log: P. Shrestha, Nov. 18 2020
 -------------------------------
 Model has vertically stretched grids. So, it requires interpolation to plot PPI
 or RHI of synthetic polarimetric variables. This may introduce additionaly uncertainty
-in diagnosing the polarimetric singatures. So, to avoid any interpolation of polarimetric moments, it would be desirable to plot the variables in their native co-ordinates.
+in diagnosing the polarimetric singatures. So, to avoid any interpolation of polarimetric moments, 
+it would be desirable to plot the variables in their native co-ordinates.
 
 ppi_model.ncl   -> Shows the variability in spatial pattern dz and height at different
                    half-levels.
@@ -13,10 +14,14 @@ compare_ppi_model.ncl --> Compares synthetic polarimetric variables between mode
                           model mass point height in that model level (a.m.s.l)
 compare_rhi_model.ncl --> Compares synthetic polarimetric variables between model level data and interpolated data
 
+
+Other diagnostics
+-------------------------------
 diagnose_atmwater.ncl --> Computes Precipitatble Water, LWP and IWP from model output
 	  
 diagnose_prfo.ncl		  
-edgeDetetction.ncl   
+edgeDetetction.ncl   --> Edge detection for storm tracking algorithm
+   
 diagnose_convfraction.ncl  
 diagnose_QX.ncl		  
 extract_CAF_obs.ncl

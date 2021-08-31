@@ -1,5 +1,5 @@
-undef("calc_rho_nclf")
-function calc_rho_nclf(t,p,qv,qrs)
+undef("calcrho_cos_nclf")
+function calcrho_cos_nclf(t,p,qv,qc,qrs)
 begin
  ;p - pressure (Pa)
  ;qv - specific humidity (kg/kg)
@@ -11,7 +11,7 @@ begin
  Rv     = 461.51   ;Jkg-1K-1
  rat    = Rv/Rd -1.0
 
- rho    = p/(Rd*t*(1 + rat*qv - qrs))
+ rho    = p/(Rd*t*(1 + rat*qv - qc - qrs))
 
  return(rho)
 end

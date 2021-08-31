@@ -1,8 +1,17 @@
 # prom
 NCL
 
+Set PROM root directory (e.g.) 
+(bash shell)
+export prom_root=$HOME/Scripts/prom
+or (c shell)
+setenv prom_root $HOME/prom
+
 /functions
+
 Fortran wrapper codes + NCL functions
+To compile fortran wrapper coders
+./compile
 
 /diagnostics
 Diagnostic scripts - check README file within
