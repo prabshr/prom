@@ -5,6 +5,7 @@ load "$prom_root/functions/phirot2phi_nclf.ncl"
 load "$prom_root/functions/shapefile_utils.ncl"
 load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/extract_atmwater_nclf.ncl"
+load "$prom_root/functions/vtc_nclf.ncl"
 
 ;Plot either AP tracers or vertically integrated water
 
@@ -15,15 +16,14 @@ begin
  pid       = 0
  ydates    = (/"20150705","20160513","20170706"/)
  lndcov    = (/"HET","HET","HET"/)
- insts     = (/6, 8, 11/)
- fns       = (/36,34,18/) 
+ insts     = (/5, 8, 11/)
+ fns       = (/6,34,18/) 
  ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
  ;ixs       = (/60,124,95/) + 65 ;Stack emission
 
- ftracer   = True 
+ fvtc     = True 
 ;Tracer
- ilev      = 70
- varname   = "NO"
+ ;varname   = "PM25_EC"
 
 ;Vertically integrated water
  opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
@@ -39,6 +39,7 @@ begin
 
  diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/"
  diri_cosI = diri_cos + "/ivr/"
+ diri_cos  = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
 
  ;Bonn Radar
  lonc        = 7.071663; N
@@ -52,6 +53,12 @@ begin
  lat2d      = nc_cosI->lat
  rotpole    = nc_cosI->rotated_pole
  topo       = nc_cosI->HSURF(0,:,:)
+ hhl       = nc_cosI->HHL(0,::-1,:,:)
+ ndimhhl   = dimsizes(hhl)
+ nz        = ndimhhl(0)-1
+ ny        = ndimhhl(1)
+ nx        = ndimhhl(2)
+
  
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
@@ -61,9 +68,15 @@ begin
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
  print("Processing ..." + fns(pid) + "  " + str_time)
 
- if (ftracer) then
-   ;Extract Tracers 
-   tracer = nc_cos->$varname$(0,ilev,:,:)
+ if (fvtc) then
+   ;Extract vertical tropospheric column 
+   tracer3d = nc_cos->$varname$(0,::-1,:,:)
+   P        = nc_cos->P(0,::-1,:,:)
+   T        = nc_cos->T(0,::-1,:,:)
+
+   printVarSummary(tracer3d)
+
+   tracer   = vtc_nclf(tracer3d,P,T,hhl)
    tracer@lat2d = lat2d
    tracer@lon2d = lon2d
  else
@@ -96,11 +109,8 @@ begin
  end if
 
 
-; Extract parameters
- ndim = dimsizes(lat2d)
-
- ;PLOT
- ;-----------------------------------------------------------------------
+;PLOT
+;-----------------------------------------------------------------------
  fncps      = "~F21~"
  fncps_no   = 21
  fncps_hgt  = 0.021
@@ -119,7 +129,6 @@ begin
  ;--------------------
  res@gsnDraw                    = False
  res@gsnFrame                   = False
- res@gsnSpreadColors            = True             ; use full color map
  res@gsnAddCyclic               = False
  res@gsnLeftString              = ""
  res@gsnRightString             = tracer@long_name + " [" + tracer@units + "]" 
@@ -197,8 +206,8 @@ begin
  res@mpLimitMode               = "LatLon"
  res@mpMinLatF          = lat2d(0,0)
  res@mpMinLonF          = lon2d(0,0)
- res@mpMaxLatF         = lat2d(ndim(0)-1,ndim(1)-1)
- res@mpMaxLonF         = lon2d(ndim(0)-1,ndim(1)-1)
+ res@mpMaxLatF         = lat2d(ny-1,nx-1)
+ res@mpMaxLonF         = lon2d(ny-1,nx-1)
 
  res@mpFillOn                  = True
  res@mpOceanFillColor          = "White"
@@ -206,7 +215,7 @@ begin
  res@mpGridAndLimbOn           = True
  res@mpDataSetName             = "Earth..4"
  res@mpDataBaseVersion         = "MediumRes"      ; use finer database
- res@mpOutlineOn               = False ;True
+ res@mpOutlineOn               = True
  res@mpOutlineBoundarySets     = "National"
  res@mpProvincialLineThicknessF  = 4.
  res@mpNationalLineDashPattern   = 3
@@ -219,6 +228,7 @@ begin
  ;cn Resources
  ;--------------------
  cres@cnFillOn                = True             ; turn on color
+ cres@cnFillPalette = "amwg"
  cres@cnLinesOn               = False            ; no contour lines
  cres@cnLineLabelsOn          = False            ; no contour labels
  cres@cnFillMode              = "CellFill"
@@ -227,7 +237,7 @@ begin
  cres@gsnLeftString           = ""
  cres@gsnCenterString         = ""
  cres@cnInfoLabelFontColor    = "grey"
- cres@cnLevels                = fspan(vmin,vmax,50)
+ cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
  cres@gsnRightString          = ""
  dum_tracer  = gsn_csm_contour(wks,tracer,cres)
  overlay(plot,dum_tracer)
@@ -320,8 +330,8 @@ begin
  ppres@gsLineColor        = "gray3"
  ppres@gsLineDashPattern  = 3
  ppres@gsLineThicknessF   = 1.0
- xx   = (/lon2d(0,ixs(pid)),lon2d(ndim(0)-1,ixs(pid))/)
- yy   = (/lat2d(0,ixs(pid)),lat2d(ndim(0)-1,ixs(pid))/)
+ xx   = (/lon2d(0,ixs(pid)),lon2d(ny-1,ixs(pid))/)
+ yy   = (/lat2d(0,ixs(pid)),lat2d(ny-1,ixs(pid))/)
  csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
 
 

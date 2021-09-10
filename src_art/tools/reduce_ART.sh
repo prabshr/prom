@@ -2,7 +2,7 @@
 #Use ncap2 and ncks to add AQMEII2 recommended variables and remove individual ART outputs
 #Log: P. Shrestha (Sep 2. 2021)
 #
-sdir=/p/largedata/hbn33/shrestha1/runART_5_HET/cosout
+sdir=/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_8_HET/cosout
 for entry in "$search_dir"${sdir}/*.nc
 do
   echo "Add AQMEII2 recommended variables to and reduce " $entry

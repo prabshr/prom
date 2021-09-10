@@ -18,22 +18,22 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
-load "$PROM/functions/calc_rho_nclf.ncl"
-load "$PROM/functions/melt_layer_height_nclf.ncl"
-load "$PROM/functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
+load "$prom_root/functions/melt_layer_height_nclf.ncl"
+load "$prom_root/functions/cosmo_time_nclf.ncl"
 
 begin
 
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- ;opt         = 0  ; [0 - zero moment, 1- first moment]
- diri        = "/p/project/chbn33/hbn331/" ;"/p/scratch/chbn33/hbn331/"
+ opt         = 1  ; [0 - zero moment, 1- first moment]
+ diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1"
  event       = "runE_" + inst + "_"
  case        = "HET2483"
 
- diri_cos    = diri + event + case + "/cosout/"
- diri_cosI   = diri + event + case + "/cosout/ivr/"
+ diri_cos    = diri + "/" + case + "/" + event + case + "/cosout/"
+ diri_cosI   = diri + "/" + case + "/" + event + case + "/cosout/ivr/"
 
  ;
  hydro_colors = (/"green","blue","skyblue","purple","black","orange"/)
@@ -46,7 +46,7 @@ begin
  glat_id = (/50.73052/) ;
 
  gloc          = 0       ;Location for vertical Profile
- filindex      = ispan(0,24,1)   ;files to plot
+ filindex      = ispan(11,13,1)   ;files to plot
 
 ;-----------------------------------------------------------------------------------------
 ; Set variables to read and specify scales or offsets
@@ -108,17 +108,17 @@ else if (opt.eq.2) then
 ;-----------------------------------------------------------------------------------------
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  nf_cos   = dimsizes(fils_cos)
+
 ;Initialize empty arrays variables
-; nf_ctr = dimsizes(filindex) 
- nf_ctr = dimsizes(fils_cos)
+ nf_ctr = dimsizes(filindex) 
 ;
- do fnctr = 100,nf_ctr-1   ;;BIG LOOP OVER FILES 
+ do fnctr = 0,nf_ctr-1   ;;BIG LOOP OVER FILES 
    
    fn = fnctr ;filindex(fnctr)
    nc_cos = addfile(fils_cos(fn),"r")
    time   = nc_cos->time
    ;
-   str_time = cosmo_time_nclf(time)
+   str_time = cosmo_time_nclf(time,0)
  
 ;------------------------------------------------------------------------------
 ;;Prognostic state variables
@@ -137,7 +137,7 @@ else if (opt.eq.2) then
    end if
    if (opt.ne.2) then
      qrs              = qr + qi + qs + qg + qh      ;Precipitation loading
-     rho              = calc_rho_nclf(tair,pressure,qv,qc,qrs) ;air density (kgm-3)
+     rho              = calcrho_cos_nclf(tair,pressure,qv,qc,qrs) ;air density (kgm-3)
    end if
 
    nh           = dimsizes(hydrometeors)
@@ -293,9 +293,9 @@ else if (opt.eq.2) then
  delete([/varh,res,resV/])
 
  end do
- system("rm -r qxDiagnostics")
- system("mkdir qxDiagnostics")
- system("mv Figure_diagnostic_*.png qxDiagnostics")
- system("convert -delay 100 qxDiagnostics/Figure*.png "+"Figure_diagnostic_"+subevent+"_"+opt +".gif")
+; system("rm -r qxDiagnostics")
+; system("mkdir qxDiagnostics")
+; system("mv Figure_diagnostic_*.png qxDiagnostics")
+; system("convert -delay 100 qxDiagnostics/Figure*.png "+"Figure_diagnostic_"+subevent+"_"+opt +".gif")
 
 end
