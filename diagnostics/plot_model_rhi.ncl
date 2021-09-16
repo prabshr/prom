@@ -6,10 +6,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
-load "$PROM/functions/shade_terrain.ncl"
-load "./functions/cosmo_time_nclf.ncl"
-load "./functions/calc_rho_nclf.ncl"
-load "./functions/convol.ncl"
+load "$prom_root/functions/shade_terrain.ncl"
+load "$prom_root/functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
+load "$prom_root/functions/convol.ncl"
 
 
 begin
@@ -21,7 +21,7 @@ begin
  ydates    = (/"20150705","20160513","20170706"/)
 
  insts     = (/6, 8, 11/)
- fns       = (/11,34,18/)
+ fns       = (/11,34,18/) - 11
  ixs       = (/90,124,95/) + 65  ;Need to add offset due to clipping of radar
 
  ;;extract_ascii clips
@@ -39,10 +39,11 @@ begin
  ;----
 
  itype     = "HET2483"
- diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid)
- subevent  = itype + "/runE_" + insts(pid) + "_" + itype
- diri_cos  = diri + "/" + "/" + subevent + "/cosout/"
- diri_cosI = diri + "/" + "/" + subevent + "/cosout/ivr/"
+ diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1"
+ ;diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid)
+ event  = "runE_" + insts(pid) + "_" + itype
+ diri_cos  = diri + "/" + itype + "/" + event + "/cosout/"
+ diri_cosI = diri + "/" + itype + "/" + event + "/cosout/ivr/"
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
@@ -98,6 +99,8 @@ begin
 ;
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
+ print("Processing " + fils_cos(fns(pid)))
+
  nc_cos    = addfile(fils_cos(fns(pid)),"r")
  time      = nc_cos->time
  ;
@@ -127,8 +130,8 @@ begin
  qs            = nc_cos->QS(0,::-1,:,:)    ;kg/kg
  qg            = nc_cos->QG(0,::-1,:,:)    ;kg/kg
  qh            = nc_cos->QH(0,::-1,:,:)    ;kg/kg
- tlc           = qc + qr + qi + qs + qg + qh    ;Precipitation loading
- rho           = calc_rho_nclf(tair,pressure,qv,tlc) ;air density (kgm-3)
+ tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+ rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
 
  nh           = dimsizes(hydrometeors)
  varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
@@ -408,8 +411,8 @@ begin
  amres = True
  amres@amParallelPosF   = 0.2
  amres@amOrthogonalPosF = -0.45
- annoid1 = gsn_add_annotation(plot(2),lbid1,amres)
- annoid3 = gsn_add_annotation(plot(3),lbid2,amres)
+; annoid1 = gsn_add_annotation(plot(2),lbid1,amres)
+; annoid3 = gsn_add_annotation(plot(3),lbid2,amres)
 
 ; Add annotation
  txres               = True                      ; text mods desired
@@ -420,7 +423,7 @@ begin
  ;Draw Panel
  resP = True
  resP@gsnMaximize    = True
- resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
+ ;resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
  ;resP@gsnPanelDebug = True
- gsn_panel(wks,plot,(/1,4/), resP)
+ gsn_panel(wks,plot,(/2,2/), resP)
 end
