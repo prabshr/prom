@@ -1,0 +1,12 @@
+Log: P. Shrestha, Sep. 16 2021
+-------------------------------
+storm-tracking
+ * edgeDetetction.ncl
+ * track_emv_zh.ncl   -> To generate 2D temporal files of ZH
+ * edgeDetetction.ncl -> Two step process to generate the temporal mask for the storm
+
+art-data-reduce
+ * aqmeii2.nco        -> List of mathematical functions for nco 
+ * reduce_ART.sh      -> Uses nco to reduce COSMO-ART outputs
+
+
