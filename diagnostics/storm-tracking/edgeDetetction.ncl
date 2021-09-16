@@ -5,16 +5,20 @@
 ;2) Select the co-ordinates of storm at different times
 ;3) Enter the co-ordinates with time , opt@jd,opt@id
 ;4) Run the script again with opt = True 
-
-;Functions:
+;
+;Functions Used:
 ; convol
 ; trackedge
 ; scanfill
-;The storm has to be selected manually
+; Usage:
+; ncl edgeDetetction.ncl step=0
+; ncl edgeDetetction.ncl step=1 st=X et=X (st/et are start/end time for storm masking)
+; The storm has to be selected manually for masking
+; Edit in MAIN code
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
 
-function convol(data)
+function convol(data,cthr)
 ;Roberts cross convolution
 begin 
   print("Roberts cross convolution to find edges ....")
@@ -36,13 +40,68 @@ begin
       Gy   = (ky(0,0)*yy(j,i) + ky(1,1)*yy(jj,ii)) \ 
               + (ky(1,0)*yy(jj,i) + ky(0,1)*yy(j,ii))
       GradI(0,j,i) = (Gx^2 + Gy^2)^(0.5)
-      if (Gx.ne.0) then
+      if (.not.(ismissing(Gx)) .and. Gx.ne.0) then
         GradI(1,j,i) = atan(Gy/Gx) * 180./3.14159
       end if
     end do
   end do
-  GradI = where(GradI.eq.0,0,1)
+  GradI = where(GradI.le.cthr,0,1)
   return(GradI(0,:,:))
+end
+
+function thinedge(data)
+;First used 2x2 box to find all filled edges
+;and checks connectedness of 4 corners based on outer 3 edges
+;of each 2x2 box to remove the thick edge
+;In the present state, this algorithm is not robust yet
+
+begin
+  print("Thinning the edges ...")
+  ;Dimensions of data
+  ndim = dimsizes(data)
+  ny   = ndim(0)
+  nx   = ndim(1)
+  fdebug = True
+
+  ;Pad zeros to remove boundary affect
+  udata = new((/ny+1,nx+1/),typeof(data))
+  udata = 0
+  udata(1:ny,1:nx) = data
+  ucdata = udata            ;make a copy
+;Search kernel
+  ; *  *  
+  ; *  *
+  drc   = (/(/0,0/),(/0,1/),(/1,1/),(/1,0/)/)
+;Connectedness kernel
+  jcx = (/(/0,-1,-1/),(/-1,-1,0/),(/0,1,1/),(/1,1,0/)/)
+  icx = (/(/-1,-1,0/),(/0,1,1/), (/1,1,0/),(/0,-1,-1/)/)
+
+  do jj = 1, ny-2,2
+  do ii = 1, nx-2,2
+    jjs     = drc(:,0) + jj    ;Search Kernel
+    iis     = drc(:,1) + ii    ;Search Kernel
+    datac = (/udata(jjs(0),iis(0)),udata(jjs(1),iis(1)),udata(jjs(2),iis(2)),udata(jjs(3),iis(3))/)
+    cind  = ind(datac.eq.1)
+    if (.not.(all(ismissing(cind)))) then
+       ndc = dimsizes(cind)
+       if (ndc.eq.4) then
+         ;Check for connectedness, each box has 3 edges on outside
+         do ic = 0, 3
+           dataucx = (/udata(jjs(ic)+jcx(ic,0),iis(ic)+icx(ic,0)), \
+                       udata(jjs(ic)+jcx(ic,1),iis(ic)+icx(ic,1)), \
+                       udata(jjs(ic)+jcx(ic,2),iis(ic)+icx(ic,2))/)
+           cxind = ind(dataucx.eq.1)
+           if (all(ismissing(cxind))) then
+             ucdata(jjs(0),iis(0)) = 0   ;Remove one edge
+           end if
+           delete(cxind)
+         end do
+       end if
+    end if
+    delete(cind)
+  end do
+  end do
+  return(ucdata(1:ny,1:nx)) 
 end
 
 function trackedge(jd,id,data)
@@ -52,7 +111,7 @@ begin
   ndim = dimsizes(data)
   ny   = ndim(0)
   nx   = ndim(1)
-  fdebug = True 
+  fdebug = False ;True 
 
   ;Pad zeros to remove boundary affect
   udata = new((/ny+1,nx+1/),typeof(data))
@@ -85,16 +144,16 @@ begin
     end if
     ;4x4
     if (ctr.eq.0) then
-      jjs     = drc(:,0) + jj0
-      iis     = drc(:,1) + ii0
+      jjs     = drc(:,0) + jj0    ;Search Kernel
+      iis     = drc(:,1) + ii0    ;Search Kernel
     else
       jjs     = drc(:,0) + jj
       iis     = drc(:,1) + ii
     end if
-    jjs(0)    = min((/jjs(0),ny-1/))
-    jjs(1)    = max((/0, jjs(1)/))
-    iis(2)    = max((/0, iis(2)/))
-    iis(3)    = min((/iis(3),nx-1/)) 
+    jjs(0)    = min((/jjs(0),ny-1/))    ;bound for top kernel
+    jjs(1)    = max((/0, jjs(1)/))      ;bound for bottom kernel
+    iis(2)    = max((/0, iis(2)/))      ;bound for left kernel
+    iis(3)    = min((/iis(3),nx-1/))    ;bound for right kernel
    
     datac = (/udata(jjs(0),iis(0)),udata(jjs(1),iis(1)),udata(jjs(2),iis(2)),udata(jjs(3),iis(3))/)
 
@@ -194,8 +253,9 @@ begin
        con  = (high - low) / 32766.0  
        n    = abs(tointeger(low + con * rand()))
        n    = min((/n, dimsizes(sind(:,0))-1/))
-       print(sse + " " +  dimsizes(sind(:,0)) + " rand " + n)
-     
+       if (fdebug) then
+         print(sse + " " +  dimsizes(sind(:,0)) + " rand " + n)
+       end if
       jj = tointeger(jj+sind(n,0))
       ii = tointeger(ii+sind(n,1))
       delete([/sbox,sbox1d,sind/])
@@ -287,47 +347,83 @@ begin
   end if
 end
 
+;MAIN code
 begin
-  nc_radar = addfile("debug_BoXPol.nc","r")
-  fopt =  True ;False 
-  jd  = (/ 72, 95, 94,102,112,126,165,140,166,176,177,180,160,186,173,182, \
-              184,180,208,217,231,232,232,186,203,203,215,216,231/)
-  id  = (/ 33, 38, 49, 56, 62, 73, 89,106,100,109,120,131,139,149,167,190,  \
-              196,208,201,205,223,229,248,283,288,303,314,325,331/)
+;  nc_radar = addfile("debug_BoXPol.nc","r")
+;  fopt =  True ;False 
+;  jd  = (/ 72, 95, 94,102,112,126,165,140,166,176,177,180,160,186,173,182, \
+;              184,180,208,217,231,232,232,186,203,203,215,216,231/)
+;  id  = (/ 33, 38, 49, 56, 62, 73, 89,106,100,109,120,131,139,149,167,190,  \
+;              196,208,201,205,223,229,248,283,288,303,314,325,331/)
 
-  ;;; opt@bdr = False
+   ;       0                   5                  10                  15
+   jd = (/165,133,137,140,126,129,132,134,137,142,144,138,156,161,167,165, \
+          170,171,170,176,182,189,188,190,193,183,196,202,146,198,201,209, \
+          210,210,219,219,219/)
+   id = (/134,119,122,126,133,134,137,139,142,146,147,149,157,161,163,159, \
+          171,168,173,177,179,181,187,189,188,192,200,203,203,212,216,222,   \
+          216,222,219,219,239,239,239/)
 
+  fname    = "PROM1_runE_7_HET2483.nc"
+  nc_radar = addfile(fname,"r")
+
+  ;bopt = False
+  ;bopt@bdr = False
+
+  if (step.eq.0) then
+    fopt = False
+  else if (step.eq.1) then 
+    fopt = True
+  else
+    print("Code not written for step = " + step)
+    exit
+  end if
+  end if
 ;
   if (fopt) then
-    nc_fil = addfile("data1.nc","r")
+    nc_fil = addfile("data_0.nc","r")
     zh     = nc_fil->Band1
     ndim     = dimsizes(zh)
-    st = 0
-    et = 0 ;dimsizes(jd)-1 
+    ;st = 5 
+    ;et = dimsizes(jd)-1 
     do it = st,et
+      print("Processing " + it)
+      ; val  = bucketfill(jd(it),id(it),zh(it,:,:),0,bopt)
+      ;val  = thinedge(zh(it,:,:))
       val  = trackedge(jd(it),id(it),zh(it,:,:))
-      val  = scanfill(val)
+      val  = (/scanfill(val)/)
       zh(it,:,:) = (/val/)
     end do
+    fname_out = "smask_" + fname
+    zh@long_name = "Storm Mask"
+    zh@st = st
+    zh@et = et
+    zh@jd = jd
+    zh@id = id    
   else
     zh       = nc_radar->Band1
     ndim     = dimsizes(zh)
+    fval     = (/zh@_FillValue/)
     delete(zh@_FillValue)
-    rnd = random_uniform(0.1,0.5,1)
 
-    zh = where(zh.ne.999,1,rnd)
+    rnd    = random_uniform(0.1,0.5,1)
+
+    zh     = where(zh.ne.fval,1,rnd)
     st = 0 
-    et = ndim(0)-1 ;dimsizes(jd) -1 ; ndim(0)-1 
+    et = ndim(0)-1 
 
     do it  = st, et  
       print("Processing " + it + " of " + ndim(0))
-      val = convol(zh(it,:,:))
+      zh(it,:,:) = zh(it,:,:)  
+      val = convol(zh(it,:,:),0.1)
       zh(it,:,:) = (/val/)
       delete(val)
     end do
+    fname_out = "data_" + step + ".nc"
   end if
 
-  system("rm temp2.nc")
-  fout = addfile("temp2.nc","c")
-  fout->Band1 = zh(st:et,:,:) 
+  ;Output of Processed data
+  system("rm " + fname_out)
+  fout = addfile(fname_out,"c")
+  fout->Band1 = zh
 end

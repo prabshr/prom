@@ -1,9 +1,16 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+;Extracts data from EVORADARO-POL outputs
+;opt@profile = 1 returns vertical profile at opt@iy and opt@ix
+;Else returns the whole data
+;opt@nf specifies the time snapshhot to process in the folder
+
 function read_emvorado_pol(diri,opt)
 begin
 
   fil  = systemfunc("ls " + diri + "/" + opt@var + "*.dat")
-  d1   = asciiread(fil, -1, "float")
+  print("Processing " + fil(opt@nf) + "...." )
+
+  d1   = asciiread(fil(opt@nf), -1, "float")
 
   if (opt@var.ne."kdp") then
     iind = 2
@@ -18,7 +25,6 @@ begin
   data@_FillValue = -999.99
 
   print("EMVORADO-POL auxillary output " + opt@var + ": Data Size: " + ny + " " + nx + " " + nz)
-  print(" " + fil)
   print("--------------")
 
   if (opt@var.eq."zh") then
@@ -58,7 +64,8 @@ begin
 
   ;Reverse data
   data = data(::-1,:,:)
-  if (opt@profile .eq. "1") then
+  if (opt@profile .eq. 1) then
+    print("Returning vertical profile at " + opt@iy + " " + opt@ix)
     data1d = data(:,opt@iy,opt@ix)
     return(data1d)
   else

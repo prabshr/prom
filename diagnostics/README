@@ -1,5 +1,12 @@
-Log: P. Shrestha, Nov. 18 2020
+Log: P. Shrestha, Sep. 16 2021
 -------------------------------
+storm-tracking
+ * edgeDetetction.ncl  
+ * track_emv_zh.ncl   -> To generate 2D temporal files of ZH
+ * edgeDetetction.ncl -> Two step process to generate the temporal mask for the storm
+
+Log: P. Shrestha, Nov. 18 2020 
+---------------------------------
 Model has vertically stretched grids. So, it requires interpolation to plot PPI
 or RHI of synthetic polarimetric variables. This may introduce additionaly uncertainty
 in diagnosing the polarimetric singatures. So, to avoid any interpolation of polarimetric moments, 
