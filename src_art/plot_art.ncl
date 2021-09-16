@@ -16,14 +16,17 @@ begin
  pid       = 0
  ydates    = (/"20150705","20160513","20170706"/)
  lndcov    = (/"HET","HET","HET"/)
- insts     = (/5, 8, 11/)
- fns       = (/6,34,18/) 
+ insts     = (/6, 8, 11/)
+ fns       = (/5,34,18/) 
  ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
  ;ixs       = (/60,124,95/) + 65 ;Stack emission
 
  fvtc     = True 
+ htrop    = 3000.0 ;Tropospheric height [m]
+ uscale   = 2.69E16 ; Dobson Units
 ;Tracer
- ;varname   = "PM25_EC"
+ varnames = (/"SO2", "HCHO","TAU_AERO_A", "TAU_SEAS_A" ,"PM25_EC"/)
+ varname  = varnames(0)
 
 ;Vertically integrated water
  opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
@@ -39,7 +42,6 @@ begin
 
  diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/"
  diri_cosI = diri_cos + "/ivr/"
- diri_cos  = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
 
  ;Bonn Radar
  lonc        = 7.071663; N
@@ -54,6 +56,8 @@ begin
  rotpole    = nc_cosI->rotated_pole
  topo       = nc_cosI->HSURF(0,:,:)
  hhl       = nc_cosI->HHL(0,::-1,:,:)
+ print(max(hhl))
+ exit
  ndimhhl   = dimsizes(hhl)
  nz        = ndimhhl(0)-1
  ny        = ndimhhl(1)
@@ -74,13 +78,14 @@ begin
    P        = nc_cos->P(0,::-1,:,:)
    T        = nc_cos->T(0,::-1,:,:)
 
-   printVarSummary(tracer3d)
-
-   tracer   = vtc_nclf(tracer3d,P,T,hhl)
+   tracer   = vtc_nclf(tracer3d,P,T,hhl,htrop,uscale)
    tracer@lat2d = lat2d
    tracer@lon2d = lon2d
- else
-   tracer = extract_atmwater_nclf(fils_cos(fns(pid)),fil_ivr,nbdl,opt)
+ else 
+   tracer3d = nc_cos->$varname$(0,::-1,:,:)
+   tracer = dim_sum_n(tracer3d,0)
+
+   ;tracer = extract_atmwater_nclf(fils_cos(fns(pid)),fil_ivr,nbdl,opt)
  end if
 
  vmin = min(tracer)
@@ -228,7 +233,7 @@ begin
  ;cn Resources
  ;--------------------
  cres@cnFillOn                = True             ; turn on color
- cres@cnFillPalette = "amwg"
+ cres@cnFillPalette           = "amwg" ;"sunshine_9lev"  ;"amwg"
  cres@cnLinesOn               = False            ; no contour lines
  cres@cnLineLabelsOn          = False            ; no contour labels
  cres@cnFillMode              = "CellFill"
@@ -238,6 +243,7 @@ begin
  cres@gsnCenterString         = ""
  cres@cnInfoLabelFontColor    = "grey"
  cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
+ ;cres@cnLevels                = ispan(0,10,1)/10. ;fspan(vmin,vmax,20)
  cres@gsnRightString          = ""
  dum_tracer  = gsn_csm_contour(wks,tracer,cres)
  overlay(plot,dum_tracer)

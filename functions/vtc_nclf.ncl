@@ -1,12 +1,13 @@
 undef("vtc_nclf")
-function vtc_nclf(data3d,P,T,hhl)
+function vtc_nclf(data3d,P,T,hhl,htrop,uscale)
 ;extract vertical tropospheric columns for gases (molecules per cm2)
 ;from model outputs
 ;hhl in m, data3d in ppmv (i.e. parts per million by volume) for gaseous tracers
 ;P in Pascals, T in K
+;htrop in m
+;uscale to scale the processed data
 
 begin
-  htrop  = 10000. ; m
   R      = 8.314 ; J/K/mol
   Na     = 6.022 * 1E23 ; molecules/mol
 
@@ -19,6 +20,7 @@ begin
  ;
   ndim   = dimsizes(hhl)
   zind   = closest_val(htrop,hhl(:,ndim(1)/2,ndim(2)/2))
+  print(zind)
 
   ;Compute volume per mole 
   V = R * T / P             ;m3
@@ -29,12 +31,12 @@ begin
   ;Scale and aggregate over htrop
   data2d = new((/ndim(1),ndim(2)/),"float")
   data2d = 0.
-  do iz = 0, zind
+  do iz = 0, zind-1
     data2d = data2d + data3d(iz,:,:) * dz(iz,:,:)  * scale * (Na/V(iz,:,:))
   end do
 
-  data2d = data2d / 1E15
+  data2d = data2d / uscale 
   data2d@long_name = data3d@long_name
-  data2d@units     = "10~S~15~N~ molecules cm-2"
+  data2d@units     = uscale + "  molecules cm-2"
   return(data2d)
 end
