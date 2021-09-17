@@ -21,16 +21,16 @@ begin
  ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
  ;ixs       = (/60,124,95/) + 65 ;Stack emission
 
- fvtc     = True 
- htrop    = 3000.0 ;Tropospheric height [m]
- uscale   = 2.69E16 ; Dobson Units
+ fvtc     = False ;True 
+  htrop    = 3000.0 ;Tropospheric height [m]
+  uscale   = 2.69E16 ; Dobson Units
 ;Tracer
- varnames = (/"SO2", "HCHO","TAU_AERO_A", "TAU_SEAS_A" ,"PM25_EC"/)
+ varnames = (/"OZONE", "HCHO","TAU_AERO_A", "TAU_SEAS_A" ,"PM25_EC"/)
  varname  = varnames(0)
 
 ;Vertically integrated water
- opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
- nbdl    = 35
+  opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
+  nbdl    = 35
 
  fstream   = False
  shp_fil   = "/daten01/z4/database/TestCases/bonnRadar/shape_map/vect_map.shp"
@@ -47,6 +47,10 @@ begin
  lonc        = 7.071663; N
  latc        = 50.73052; E
 
+ ;Bonn city
+ latb = 50.733334
+ lonb = 7.100000
+
 ; Read Variables
 ;-----------------------------------------------------------------------
  fil_ivr    = diri_cosI + "lfff00000000c.nc"
@@ -56,8 +60,7 @@ begin
  rotpole    = nc_cosI->rotated_pole
  topo       = nc_cosI->HSURF(0,:,:)
  hhl       = nc_cosI->HHL(0,::-1,:,:)
- print(max(hhl))
- exit
+
  ndimhhl   = dimsizes(hhl)
  nz        = ndimhhl(0)-1
  ny        = ndimhhl(1)
@@ -66,11 +69,15 @@ begin
  
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
- nc_cos    = addfile(fils_cos(fns(pid)),"r")
+ ;fn        = fns(pid)
+
+ do fn = 0,36
+
+ nc_cos    = addfile(fils_cos(fn),"r")
  time      = nc_cos->time
  ;
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
- print("Processing ..." + fns(pid) + "  " + str_time)
+ print("Processing ..." + fn + "  " + str_time)
 
  if (fvtc) then
    ;Extract vertical tropospheric column 
@@ -82,10 +89,13 @@ begin
    tracer@lat2d = lat2d
    tracer@lon2d = lon2d
  else 
-   tracer3d = nc_cos->$varname$(0,::-1,:,:)
-   tracer = dim_sum_n(tracer3d,0)
+   nbdl=30
+   tracer3d = nc_cos->$varname$(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   tracer = dim_avg_n(tracer3d(0:20,:,:),0) *1000.
+   copy_VarAtts(tracer3d, tracer)
+   tracer@units = "ppbv"
 
-   ;tracer = extract_atmwater_nclf(fils_cos(fns(pid)),fil_ivr,nbdl,opt)
+   ;tracer = extract_atmwater_nclf(fils_cos(fn),fil_ivr,nbdl,opt)
  end if
 
  vmin = min(tracer)
@@ -125,8 +135,8 @@ begin
  txbgColor  = "white"
  txfnColor  = "black"
 
- wks_type   = "x11"
- wks        = gsn_open_wks(wks_type,"Figure_tracers")
+ wks_type   = "png"
+ wks        = gsn_open_wks(wks_type,"Figure_tracers_"+sprinti("%0.2i",fn))
 
  res = True
 
@@ -135,14 +145,14 @@ begin
  res@gsnDraw                    = False
  res@gsnFrame                   = False
  res@gsnAddCyclic               = False
- res@gsnLeftString              = ""
+ res@gsnLeftString              = str_time
  res@gsnRightString             = tracer@long_name + " [" + tracer@units + "]" 
 
  ;vp Resources
  ;-----------------------
  res@vpWidthF                   = 0.7
  res@vpHeightF                  = 0.7
- res@vpXF                       = 0.1
+ res@vpXF                       = 0.15
  res@vpYF                       = 0.92;5
 
  mres                           = res
@@ -238,12 +248,12 @@ begin
  cres@cnLineLabelsOn          = False            ; no contour labels
  cres@cnFillMode              = "CellFill"
  cres@cnLevelSelectionMode    = "ExplicitLevels"
- cres@cnFillOpacityF          = 0.7
+ cres@cnFillOpacityF          = 0.5
  cres@gsnLeftString           = ""
  cres@gsnCenterString         = ""
  cres@cnInfoLabelFontColor    = "grey"
- cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
- ;cres@cnLevels                = ispan(0,10,1)/10. ;fspan(vmin,vmax,20)
+ ;cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
+ cres@cnLevels                = ispan(30,90,5)*1.0 ;fspan(vmin,vmax,20)
  cres@gsnRightString          = ""
  dum_tracer  = gsn_csm_contour(wks,tracer,cres)
  overlay(plot,dum_tracer)
@@ -260,12 +270,15 @@ begin
  pxres@gsMarkerThicknessF     = 6.0
  pxres@gsMarkerIndex          = 16
 
- txres@txFont                 = tfncps_no
- txres@txFontHeightF          = tfncps_hgt
- txres@txFontThicknessF       = 10.0        ;creates shadow effect
- txres@txFontColor            = txfnColor
+ txres@txFont                 = fncps_no
+ txres@txFontHeightF          = tfncps_hgt*0.8
+; txres@txFontThicknessF       = 10.0        ;creates shadow effect
+; txres@txFontColor            = txfnColor
  ;txres@txBackgroundFillColor  = "white"
  ;txres@txPerimSpaceF          = 0.
+
+ fbonn = gsn_add_text(wks,plot,"Bonn",lonb,latb,txres)
+
 ;
 ; Streams
 ;------------------
@@ -309,7 +322,7 @@ begin
  ;print(circ_lat + " " + circ_lon)
  lnres@gsLineColor      = "Brown"
  lnres@gsLineThicknessF = 6.0
- line_id = gsn_add_polyline(wks, plot, circ_lon, circ_lat, lnres)
+ ;line_id = gsn_add_polyline(wks, plot, circ_lon, circ_lat, lnres)
 
  ;;
 
@@ -338,10 +351,12 @@ begin
  ppres@gsLineThicknessF   = 1.0
  xx   = (/lon2d(0,ixs(pid)),lon2d(ny-1,ixs(pid))/)
  yy   = (/lat2d(0,ixs(pid)),lat2d(ny-1,ixs(pid))/)
- csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
+ ;csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
 
 
  ;
  draw(plot)
  frame(wks)
+ delete([/res,cres/])
+ end do
 end
