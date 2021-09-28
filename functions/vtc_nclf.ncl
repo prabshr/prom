@@ -20,7 +20,7 @@ begin
  ;
   ndim   = dimsizes(hhl)
   zind   = closest_val(htrop,hhl(:,ndim(1)/2,ndim(2)/2))
-  print(zind)
+  ;print(zind)
 
   ;Compute volume per mole 
   V = R * T / P             ;m3
