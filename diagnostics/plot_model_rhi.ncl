@@ -11,7 +11,6 @@ load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
 
-
 begin
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------

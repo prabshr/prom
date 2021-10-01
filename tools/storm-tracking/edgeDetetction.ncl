@@ -1,10 +1,8 @@
 ;Edge detection and storm tracking algorithm
 ;Useful for CAF estimation for selected storm...
 ;This algorithm works in 2 step iterative fashion
-;1) Run the script with opt  = False  , it will create an output with edges
-;2) Select the co-ordinates of storm at different times
-;3) Enter the co-ordinates with time , opt@jd,opt@id
-;4) Run the script again with opt = True 
+;1) Run the script with fopt  = False  (step = 0) , it will create an output with edges
+;4) Run the script again with fopt = True (step = 1)
 ;
 ;Functions Used:
 ; convol
@@ -349,37 +347,36 @@ end
 
 ;MAIN code
 begin
-;  nc_radar = addfile("debug_BoXPol.nc","r")
-;  fopt =  True ;False 
-;  jd  = (/ 72, 95, 94,102,112,126,165,140,166,176,177,180,160,186,173,182, \
-;              184,180,208,217,231,232,232,186,203,203,215,216,231/)
-;  id  = (/ 33, 38, 49, 56, 62, 73, 89,106,100,109,120,131,139,149,167,190,  \
-;              196,208,201,205,223,229,248,283,288,303,314,325,331/)
-
-   ;       0                   5                  10                  15
-   jd = (/165,133,137,140,126,129,132,134,137,142,144,138,156,161,167,165, \
-          170,171,170,176,182,189,188,190,193,183,196,202,146,198,201,209, \
-          210,210,219,219,219/)
-   id = (/134,119,122,126,133,134,137,139,142,146,147,149,157,161,163,159, \
-          171,168,173,177,179,181,187,189,188,192,200,203,203,212,216,222,   \
-          216,222,219,219,239,239,239/)
-
-  fname    = "PROM1_runE_7_HET2483.nc"
-  nc_radar = addfile(fname,"r")
+  ;User Settings
+  ;----------------------------------------------------------------------
+  ;fname   = "debug_BoXPol.nc"
+  fname    = "PROM1_runE_8_HET2483"
 
   ;bopt = False
   ;bopt@bdr = False
+
+  ;Pre-processing
+  ;----------------------------------------------------------------------
+  nc_radar = addfile(fname+".nc","r")
 
   if (step.eq.0) then
     fopt = False
   else if (step.eq.1) then 
     fopt = True
+    cell_xy  = readAsciiTable("cell_" + fname + ".txt", 2, "integer", 1)
+    jd = cell_xy(:,0)
+    id = cell_xy(:,1)
+    seind = ind(jd.ne.-999)
+    st = seind(0)                   ;start time for storm tracking
+    et = seind(dimsizes(seind)-1)   ;end time for storm tracking
   else
     print("Code not written for step = " + step)
     exit
   end if
   end if
-;
+
+  ;Processing starts here
+  ;----------------------------------------------------------------------
   if (fopt) then
     nc_fil = addfile("data_0.nc","r")
     zh     = nc_fil->Band1
@@ -394,7 +391,7 @@ begin
       val  = (/scanfill(val)/)
       zh(it,:,:) = (/val/)
     end do
-    fname_out = "smask_" + fname
+    fname_out = "smask_" + fname +".nc"
     zh@long_name = "Storm Mask"
     zh@st = st
     zh@et = et

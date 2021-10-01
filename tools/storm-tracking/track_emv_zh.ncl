@@ -83,6 +83,9 @@ begin
  Zht@lat2d = lat2d
  Zht@lon2d = lon2d
  Zht@long_name = "Zh vertical sum"
+
+ Zhm = Zht*0.  ;used for mask generation
+
  do nf = 0, nfils-1   ;BIG LOOP
 
    opt         = True
@@ -134,7 +137,15 @@ begin
     Zht(nf,:,:)  = Zhsmth
     delete([/wgt,Zhsmth/])
    end if
-
+   
+   if (nf.eq.0) then
+     Zhm(nf,:,:) = where(Zht(nf,:,:).gt.0,1,0) 
+   else
+     temp1 = where(ismissing(Zht(nf,:,:)),0,1)
+     temp2 = where(ismissing(Zht(nf-1,:,:)),0,1)
+     Zhm(nf,:,:) = temp1 + temp2 
+   end if
+ 
    delete([/Zhsum, Zh, Zhint/])
  end do
 
@@ -143,4 +154,5 @@ begin
  system("rm " + fname)
  fout = addfile(fname,"c")
  fout->Band1 = Zht
+ fout->Band2 = Zhm
 end
