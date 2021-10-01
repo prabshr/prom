@@ -26,12 +26,15 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;expid= 1,2,3   ;for RADOLAN
- do inst = 8,8 ;0,19
+ do inst = 0,19
  ;;MODEL OUTPUT
  itype_gscp  = "HET2483"
+ ;CLUMA2
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
+ ;JUWELS
+ diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1/"
 
  subevent    = "runE_" + inst + "_" + itype_gscp
 
@@ -40,7 +43,7 @@ begin
 
  inset       = False
  fplot       = False ;True
- plotRADOLAN = True ;False 
+ plotRADOLAN = False 
  
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;

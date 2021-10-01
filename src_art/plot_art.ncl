@@ -20,17 +20,21 @@ begin
  fns       = (/5,34,18/) 
  ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
  ;ixs       = (/60,124,95/) + 65 ;Stack emission
+ nbdl      = 30    ;Cropping data extent
 
- fvtc     = True 
- htrop    = 3000.0 ;Tropospheric height [m]
- uscale   = 2.69E16 ; Dobson Units
 ;Tracer
- varnames = (/"SO2", "HCHO","TAU_AERO_A", "TAU_SEAS_A" ,"PM25_EC"/)
- varname  = varnames(0)
+ varnames = (/"NO2","HCHO", "VSOILA0", "TAU_AERO_A"/)
+ fvtcs    = (/True,  False, False, False/)
+ htrops   = (/10000.0,-999,-999, -999/)  ;Tropospheric height -midlatitudes [m]
+ uscales  = (/1E15,2.69E16,1.,1./) ; ; Dobson Units
+
+ varname  = varnames(vid)
+ fvtc     = fvtcs(vid)
+ htrop    = htrops(vid)
+ uscale   = uscales(vid)
 
 ;Vertically integrated water
  opt     = 2  ; Extract IWV(0),LWP(1),IWP(2)
- nbdl    = 35
 
  fstream   = False
  shp_fil   = "/daten01/z4/database/TestCases/bonnRadar/shape_map/vect_map.shp"
@@ -47,6 +51,10 @@ begin
  lonc        = 7.071663; N
  latc        = 50.73052; E
 
+ ;Bonn city
+ latb = 50.733334
+ lonb = 7.100000
+
 ; Read Variables
 ;-----------------------------------------------------------------------
  fil_ivr    = diri_cosI + "lfff00000000c.nc"
@@ -54,38 +62,63 @@ begin
  lon2d      = nc_cosI->lon
  lat2d      = nc_cosI->lat
  rotpole    = nc_cosI->rotated_pole
+   pole_lon = rotpole@grid_north_pole_longitude
+   pole_lat = rotpole@grid_north_pole_latitude
+
  topo       = nc_cosI->HSURF(0,:,:)
  hhl       = nc_cosI->HHL(0,::-1,:,:)
- print(max(hhl))
- exit
+
  ndimhhl   = dimsizes(hhl)
  nz        = ndimhhl(0)-1
  ny        = ndimhhl(1)
  nx        = ndimhhl(2)
 
+ ;Crop topography,height and geo-reference
+ hhlc        = hhl(:,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+ topoc       = topo(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+ topoc@lat2d = lat2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+ topoc@lon2d = lon2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+ delete(topoc@coordinates)
  
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
- nc_cos    = addfile(fils_cos(fns(pid)),"r")
+ fn        = fns(pid)
+
+ do fn = 0,36    ;BIG LOOP for animation
+
+ nc_cos    = addfile(fils_cos(fn),"r")
  time      = nc_cos->time
  ;
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
- print("Processing ..." + fns(pid) + "  " + str_time)
+ print("Processing ..." + fn + "  " + str_time)
 
  if (fvtc) then
    ;Extract vertical tropospheric column 
-   tracer3d = nc_cos->$varname$(0,::-1,:,:)
-   P        = nc_cos->P(0,::-1,:,:)
-   T        = nc_cos->T(0,::-1,:,:)
+   tracer3d = nc_cos->$varname$(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   P        = nc_cos->P(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   T        = nc_cos->T(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
 
-   tracer   = vtc_nclf(tracer3d,P,T,hhl,htrop,uscale)
-   tracer@lat2d = lat2d
-   tracer@lon2d = lon2d
+   tracer   = vtc_nclf(tracer3d,P,T,hhlc,htrop,uscale)
+   tracer@lat2d = lat2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   tracer@lon2d = lon2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+
  else 
-   tracer3d = nc_cos->$varname$(0,::-1,:,:)
-   tracer = dim_sum_n(tracer3d,0)
 
-   ;tracer = extract_atmwater_nclf(fils_cos(fns(pid)),fil_ivr,nbdl,opt)
+   tracer3d = nc_cos->$varname$(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   ;tracer   = dim_sum_n(tracer3d,0) 
+   tracer = (tracer3d(0,:,:)) ;/1.E6 ; dust concentraion cm-3
+
+   copy_VarAtts(tracer3d,tracer)
+   ;tracer@long_name = varname
+   ;tracer@units = "-"
+;   tracer = dim_avg_n(tracer3d(0:20,:,:),0) *1000.
+;   tracer@long_name = varname
+;   tracer@units = "ppbv"
+  ;tracer = extract_atmwater_nclf(fils_cos(fn),fil_ivr,nbdl,opt)
+   ;Geo-reference
+   tracer@lat2d = lat2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+   tracer@lon2d = lon2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+
  end if
 
  vmin = min(tracer)
@@ -94,8 +127,8 @@ begin
 ;Need to read shape file and convert rotated grids into geographical grids
 ;-----------------------------------------------------------------------
  if (fstream) then
- pollon= 180.0 + rotpole@grid_north_pole_longitude      
- pollat= 90. - rotpole@grid_north_pole_latitude
+ pollon= 180.0 + pole_lon
+ pollat= 90. - pole_lat
  print_shapefile_info(shp_fil)
  shp_xy    = addfile(shp_fil,"r")
  geo_dims  = getfilevardimsizes(shp_xy,"x")
@@ -126,7 +159,7 @@ begin
  txfnColor  = "black"
 
  wks_type   = "x11"
- wks        = gsn_open_wks(wks_type,"Figure_tracers")
+ wks        = gsn_open_wks(wks_type,"Figure_" +varname+"_"+sprinti("%0.2i",fn))
 
  res = True
 
@@ -135,14 +168,14 @@ begin
  res@gsnDraw                    = False
  res@gsnFrame                   = False
  res@gsnAddCyclic               = False
- res@gsnLeftString              = ""
+ res@gsnLeftString              = str_time
  res@gsnRightString             = tracer@long_name + " [" + tracer@units + "]" 
 
  ;vp Resources
  ;-----------------------
- res@vpWidthF                   = 0.7
- res@vpHeightF                  = 0.7
- res@vpXF                       = 0.1
+ res@vpWidthF                   = 0.57
+ res@vpHeightF                  = 0.57
+ res@vpXF                       = 0.15
  res@vpYF                       = 0.92;5
 
  mres                           = res
@@ -202,33 +235,37 @@ begin
  res@cnLevelSelectionMode    = "ExplicitLevels"
  res@cnLevels                  = (/100./)*1.0
 
+ ;Cropped corners
+ mpcorner = (/lat2d(nbdl,nbdl),lon2d(nbdl,nbdl),lat2d(ny-nbdl-1,nx-nbdl-1),lon2d(ny-nbdl-1,nx-nbdl-1)/)
 
 ;mp Resources
 ;--------------------
- res@mpCenterLonF              = 180.0 + rotpole@grid_north_pole_longitude           ;lon of centre of map projection system
- res@mpCenterLatF              = 90.0 - rotpole@grid_north_pole_latitude    ;lat of centre of map projection system
+ ;res@mpProjection           = "CylindricalEquidistant"
+ res@mpCenterLonF           = 180.0 + pole_lon
+ res@mpCenterLatF           = 90.0 - pole_lat
+ 
+ res@mpLimitMode           = "LatLon"        ;Important
+ res@mpMinLatF             = mpcorner(0) 
+ res@mpMinLonF             = mpcorner(1)
+ res@mpMaxLatF             = mpcorner(2)
+ res@mpMaxLonF             = mpcorner(3)
 
- res@mpLimitMode               = "LatLon"
- res@mpMinLatF          = lat2d(0,0)
- res@mpMinLonF          = lon2d(0,0)
- res@mpMaxLatF         = lat2d(ny-1,nx-1)
- res@mpMaxLonF         = lon2d(ny-1,nx-1)
-
- res@mpFillOn                  = True
- res@mpOceanFillColor          = "White"
- res@mpLandFillColor           = "transparent"
- res@mpGridAndLimbOn           = True
- res@mpDataSetName             = "Earth..4"
- res@mpDataBaseVersion         = "MediumRes"      ; use finer database
- res@mpOutlineOn               = True
- res@mpOutlineBoundarySets     = "National"
+ res@mpFillOn                    = True
+ res@mpOceanFillColor            = "White"
+ res@mpLandFillColor             = "transparent"
+ res@mpGridAndLimbOn             = True
+ res@mpDataSetName               = "Earth..4"
+ res@mpDataBaseVersion           = "MediumRes"      ; use finer database
+ res@mpOutlineOn                 = True
+ res@mpOutlineBoundarySets       = "National"
  res@mpProvincialLineThicknessF  = 4.
  res@mpNationalLineDashPattern   = 3
  res@mpNationalLineThicknessF    = 8.
  res@mpGeophysicalLineThicknessF = 8.
+
  res@mpFillDrawOrder           = "PostDraw"
 
- plot = gsn_csm_contour_map(wks, topo, res)
+ plot = gsn_csm_contour_map(wks, topoc, res)
 
  ;cn Resources
  ;--------------------
@@ -238,12 +275,15 @@ begin
  cres@cnLineLabelsOn          = False            ; no contour labels
  cres@cnFillMode              = "CellFill"
  cres@cnLevelSelectionMode    = "ExplicitLevels"
- cres@cnFillOpacityF          = 0.7
+ cres@cnFillOpacityF          = 0.5
  cres@gsnLeftString           = ""
  cres@gsnCenterString         = ""
  cres@cnInfoLabelFontColor    = "grey"
- cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
- ;cres@cnLevels                = ispan(0,10,1)/10. ;fspan(vmin,vmax,20)
+ if (vid.eq.0) then
+   cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
+ else
+   cres@cnLevels                = fspan(vmin,vmax,10) ;ispan(1,10,1)*0.1  ;fspan(vmin,vmax,20)
+ end if
  cres@gsnRightString          = ""
  dum_tracer  = gsn_csm_contour(wks,tracer,cres)
  overlay(plot,dum_tracer)
@@ -260,12 +300,15 @@ begin
  pxres@gsMarkerThicknessF     = 6.0
  pxres@gsMarkerIndex          = 16
 
- txres@txFont                 = tfncps_no
- txres@txFontHeightF          = tfncps_hgt
- txres@txFontThicknessF       = 10.0        ;creates shadow effect
- txres@txFontColor            = txfnColor
+ txres@txFont                 = fncps_no
+ txres@txFontHeightF          = tfncps_hgt*0.8
+; txres@txFontThicknessF       = 10.0        ;creates shadow effect
+; txres@txFontColor            = txfnColor
  ;txres@txBackgroundFillColor  = "white"
  ;txres@txPerimSpaceF          = 0.
+
+ fbonn = gsn_add_text(wks,plot,"Bonn",lonb,latb,txres)
+
 ;
 ; Streams
 ;------------------
@@ -309,7 +352,7 @@ begin
  ;print(circ_lat + " " + circ_lon)
  lnres@gsLineColor      = "Brown"
  lnres@gsLineThicknessF = 6.0
- line_id = gsn_add_polyline(wks, plot, circ_lon, circ_lat, lnres)
+ ;line_id = gsn_add_polyline(wks, plot, circ_lon, circ_lat, lnres)
 
  ;;
 
@@ -338,10 +381,29 @@ begin
  ppres@gsLineThicknessF   = 1.0
  xx   = (/lon2d(0,ixs(pid)),lon2d(ny-1,ixs(pid))/)
  yy   = (/lat2d(0,ixs(pid)),lat2d(ny-1,ixs(pid))/)
- csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
+ ;csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
 
+ if (vid.eq.3) then
+   tres  = True
+   tres@txFontHeightF = 0.015
 
+   mres = True
+   mres@gsMarkerIndex = 7
+   mres@gsMarkerSizeF = 10.
+   mres@gsMarkerThicknessF = 4.
+
+   stname = "FJZ-JOYCE"
+   mloc = (/50.908333,6.413056/)
+   mid1 = gsn_add_polymarker(wks,plot,mloc(1),mloc(0),mres)
+   lab1 = gsn_add_text(wks,plot,stname,mloc(1),mloc(0)+0.1,tres)
+   stname = "MAINZ"
+   mloc=(/49.999000,8.300000/)
+   mid2 = gsn_add_polymarker(wks,plot,mloc(1),mloc(0),mres)
+   lab2 = gsn_add_text(wks,plot,stname,mloc(1),mloc(0)+0.1,tres)
+ end if
  ;
  draw(plot)
  frame(wks)
+ delete([/res,cres/])
+ end do ;BIG LOOP for animation
 end
