@@ -10,8 +10,7 @@
 ; scanfill
 ; Usage:
 ; ncl edgeDetetction.ncl step=0
-; ncl edgeDetetction.ncl step=1 st=X et=X (st/et are start/end time for storm masking)
-; The storm has to be selected manually for masking
+; ncl edgeDetetction.ncl step=1 (needs the storm location, cell*txt file) 
 ; Edit in MAIN code
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
@@ -349,14 +348,16 @@ end
 begin
   ;User Settings
   ;----------------------------------------------------------------------
-  ;fname   = "debug_BoXPol.nc"
-  fname    = "PROM1_runE_8_HET2483"
+  pid       = 0            ;Experiment ID
+  expname   = "HET2483"    ;Perturbation ID
+  ;inst     = 8
 
   ;bopt = False
   ;bopt@bdr = False
-
+  pnames    = (/"PROM1","PROM2","PROM3"/)
   ;Pre-processing
   ;----------------------------------------------------------------------
+  fname    = pnames(pid) + "_runE_" + inst + "_" + expname  
   nc_radar = addfile(fname+".nc","r")
 
   if (step.eq.0) then

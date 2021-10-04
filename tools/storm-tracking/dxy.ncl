@@ -2,7 +2,9 @@
 
 begin
 ;--User Settings --------------------------------------------------
-  fname = "PROM1_runE_8_HET2483"
+  pid       = 0            ;Experiment ID
+  expname   = "HET2483"    ;Perturbation ID
+   ;inst    = 8
 
   ;First cell
   t  = 2
@@ -11,6 +13,8 @@ begin
 
   ;Search box size
   bs = 40
+  pnames   = (/"PROM1","PROM2","PROM3"/)
+  fname    = pnames(pid) + "_runE_" + inst + "_" + expname
 ;------------------------------------------------------------------
 
   ;Read nc file

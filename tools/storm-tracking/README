@@ -1,0 +1,35 @@
+Storm Mask Tutorial
+
+1) Run the storm tracking algorithm
+
+cd prom/tools/storm-tracking
+
+<Edit pid and expname> in track_emv_zh.ncl
+ncl track_emv_zh.ncl inst=8
+<It will generate a netCDF file, explore the file to identify
+ the storm at initial stage and location (inside storm)>
+ t, y, x
+
+<Edit pid and expname> in edgeDetetction.ncl
+ncl edgeDetetction.ncl step=0 inst=8
+<It will generate a netcdf file containing edges of storm>
+
+<Edit pid and expname> in dxy.ncl
+<Also upade t, y, x>
+ncl dxy.ncl inst=8
+<It will generate a text file with storm location>
+
+ncl edgeDetetction.ncl step=1 inst=8
+<It will generate a storm mask smask*.nc>
+<View the netcdf file, and check if mask is missing in some time snapshots,
+play with iy and ix and re-run the script>
+
+2) Data Archive
+
+Move the smask*.nc and cell*.txt to /nc and /txt located in
+/daten/daten04/pshrestha/shared-data/storm_mask
+
+3) Remove remaining netcdf files
+rm PROM*.nc
+rm data_0.nc 
+

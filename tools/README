@@ -3,6 +3,7 @@ Log: P. Shrestha, Sep. 16 2021
 storm-tracking
  * edgeDetetction.ncl
  * track_emv_zh.ncl   -> To generate 2D temporal files of ZH
+ * dxy.nc             -> To idenitfy the storm
  * edgeDetetction.ncl -> Two step process to generate the temporal mask for the storm
 
 art-data-reduce
