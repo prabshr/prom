@@ -10,10 +10,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
-load "./functions/cosmo_time_nclf.ncl"
-load "./functions/calc_rho_nclf.ncl"
-load "./functions/storm_tracker_nclf.ncl"
-load "./functions/radarline_nclf.ncl"
+load "$PROM/functions/cosmo_time_nclf.ncl"
+load "$PROM/functions/calcrho_cos_nclf.ncl"
+load "$PROM/functions/storm_tracker_nclf.ncl"
+load "$PROM/functions/radarline_nclf.ncl"
 begin
 
 ;-----------------------------------------------------------------------------------------
@@ -209,9 +209,8 @@ begin
  qs            = nc_cos->QS(0,::-1,:,:)    ;kg/kg
  qg            = nc_cos->QG(0,::-1,:,:)    ;kg/kg
  qh            = nc_cos->QH(0,::-1,:,:)    ;kg/kg
- tlc           = qc + qr + qi + qs + qg + qh    ;Precipitation loading
- rho           = calc_rho_nclf(tair,pressure,qv,tlc) ;air density (kgm-3)
-
+ tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+ rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
  nh           = dimsizes(hydrometeors)
  varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
  varh@units   = hydunits
@@ -336,7 +335,6 @@ begin
   ndimp       = dimsizes(tc_plane)
 
   print(max(uz_plane) + "U Z MAX")
-  exit
   varh_plane    = new((/nh,ndimp(0),ndimp(1)/),"float")
   do ih = 0, nh-1
     varh_plane(ih,:,:)    = (/wrf_user_intrp3d(varh_c(ih,:,:,:),zmodelc,"v",plane,Ipangle,iopt)/)

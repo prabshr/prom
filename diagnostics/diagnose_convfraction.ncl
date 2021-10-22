@@ -12,8 +12,8 @@ external EXT2 "$prom_root/functions/readascii.so"
 
 begin
 ; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/"
- diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
-; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20170706/Synth/"
+; diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20160513/Synth/"
+ diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20170706/Synth/"
 ; diri_dBz    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth_track/"
 
  expid        = "HET2483"
@@ -81,10 +81,10 @@ begin
 
 
  ;Debug output
- ;fdname = "debug_model_" + inst + ".nc"
- ;system("rm " + fdname)
- ;fout = addfile(fdname,"c")
- ;fout->Band1 = varD
+ fdname = "debug_model_" + inst + ".nc"
+ system("rm " + fdname)
+ fout = addfile(fdname,"c")
+ fout->Band1 = varD
 
  ;CAF output
  varh@model_level = iz

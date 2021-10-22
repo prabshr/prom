@@ -1,6 +1,3 @@
-;New version, uses storm mask and EMVORADO ouputs
-;Log: Oct 22 2021
-
 ;All variables preserve their native units
 ;scale/offset is only used for plotting
 ; Cumulative Frequency Altitude Diagram
@@ -17,7 +14,9 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$PROM/functions/cfads.ncl"
 load "$PROM/functions/load_cfadColors.ncl"
-load "$prom_root/functions/read_emvorado_pol.ncl"
+load "$prom_root/functions/storm_tracker_nclf.ncl"
+external EXT1 "$prom_root/functions/readdim.so"
+external EXT2 "$prom_root/functions/readascii.so"
 
 function read_cfad(cdiri,cens)
 begin
@@ -46,84 +45,191 @@ begin
  return(vare)
 end
 
+function record_append(fns,fne,diri,vid,glon_idB,glat_idB,opt)
+begin
+
+  diri_output = diri + "/output"
+  diri_input  = diri + "/input"
+  fils_var    = systemfunc("ls " + diri_output + "/dbz-tm-1m_*")
+  fils_elv    = systemfunc("ls " + diri_input + "/elevation_*")
+  fil_lat     = systemfunc("ls " + diri_input + "/lat_*")
+  fil_lon     = systemfunc("ls " + diri_input + "/lon_*")
+
+  ;Read header information to extract nx,ny,nz
+  nx=0 
+  ny=0
+  nz=0
+  EXT1::readdim(nx,ny,nz,fils_elv(0))
+
+  latPV = new((/1,1,ny,nx/),"float")
+  lonPV = new((/1,1,ny,nx/),"float")
+  hgtPV = new((/1,nz,ny,nx/),"float")
+  EXT2::readascii(nx,ny,1,latPV,1,1,fil_lat)
+  EXT2::readascii(nx,ny,1,lonPV,1,1,fil_lon)
+  EXT2::readascii(nx,ny,nz,hgtPV,1,1,fils_elv(0))   ;Model mass point heights
+
+  ;Extract lat-lon
+  lat_c = latPV(0,0,:,:)
+  lon_c = lonPV(0,0,:,:)
+
+  ;Average height at iz
+  ;Need to reverse the vertical levels
+  mhgt  = hgtPV(0,::-1,ny/2,nx/2)
+  mhgt  = (mhgt - mhgt(0))/1000.
+
+  nt   = fne-fns + 1 
+  varh =  new((/nt,4,nz,ny,nx/),"float")    ;Initialize variable
+  varh@_FillValue  = -99
+  varPV            = new((/8,nz,ny,nx/),"float")
+  varPV@_FillValue = -99
+
+  do nf = fns,fne
+    it = nf-fns
+    fname = fils_var(nf)
+    print(nf + " " + fname)
+    EXT2::readascii(nx,ny,nz,varPV,8,1,fname)
+
+    ;Need to reverse the vertical levels
+    varh(it,0,:,:,:) = varPV(1,::-1,:,:)
+    varh(it,1,:,:,:) = varPV(2,::-1,:,:)
+    varh(it,2,:,:,:) = varPV(3,::-1,:,:)
+    varh(it,3,:,:,:) = varPV(4,::-1,:,:)
+
+    Zh  = varh(it,0,:,:,:)
+    Zv  = varh(it,1,:,:,:)
+    KDP = varh(it,2,:,:,:)
+    RHV = varh(it,3,:,:,:)
+    varh(it,0,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh)
+    varh(it,1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv)
+    varh(it,2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
+    varh(it,3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
+
+    if (opt@fstrack)
+      wfac = opt@wfac   ;fraction of extent for search area
+      wss  = opt@wss   ;SW fraction
+      wse  = opt@wse ;NE fraction
+      ext  = opt@ext
+      ngridmax = opt@ngridmax
+
+      ;Find location where W is maximum ....
+      if (it.eq.0) then
+        mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
+        glatlon = storm_tracker_nclf(Zh,lat_c,lon_c,wfac,wss,wse,ext,mpcorner)
+      else
+        glatlon = storm_tracker_nclf(Zh,lat_c,lon_c,wfac,wss,wse,ext,mpcornerw)
+      end if
+      glat_id    = glatlon(0)
+      glon_id    = glatlon(1)
+
+      mpcorner   = (/glat_id-wss*ext(0) ,glon_id-wss*ext(1) ,glat_id+wse*ext(0) ,glon_id+wse*ext(1)/)
+      mpcornerw  = (/glat_id-wss*wfac*ext(0),glon_id-wss*wfac*ext(1),glat_id+wse*wfac*ext(0),glon_id+wse*wfac*ext(1)/)
+
+      ji      = region_ind (lat_c,lon_c, mpcorner(0),mpcorner(2),mpcorner(1),mpcorner(3))
+      ngrid   = ji(1)-ji(0)+1
+      print("ny extent : " + ngrid)
+      if (ngrid.gt.ngridmax) then
+        ji(1) = ji(0) + ngridmax-1
+        ngrid   = ji(1)-ji(0)+1
+        print("ny extent reset : " + ngrid)
+      end if
+      ngrid   = ji(3)-ji(2)+1
+      print("nx extent : " + ngrid)
+      if (ngrid.gt.ngridmax) then
+        ji(3) = ji(2) + ngridmax-1
+        ngrid   = ji(3)-ji(2) + 1
+        print("nx extent reset : " + ngrid)
+      end if
+
+      ;Cannot go beyond boundary
+      if (ji(1).gt.ny-3) then
+        ji(1) = ny-3
+        ji(0) = ji(1) - ngrid + 1
+        print("Y-Boundary reached ...")
+      end if
+      if (ji(3).gt.nx-3) then
+        ji(3) = nx-3
+        ji(2) = ji(3) - ngrid + 1
+        print("X-Boundary reached ...")
+      end if
+
+      ;Wierd way of masking
+      varh_c  = varh(it,:,:,:,:) 
+      varh_c  = varh@_FillValue
+      varh_c(:,:,ji(0):ji(1),ji(2):ji(3))  = varh(it,:,:,ji(0):ji(1),ji(2):ji(3))  
+      varh(it,:,:,:,:) = varh_c
+    end if
+    delete([/Zh, Zv, KDP, RHV/])
+    
+ end do
+
+ varh!0          = "time"
+ varh!1          = "pv"
+ varh!2          = "Z"
+ varh!3          = "lat"
+ varh!4          = "lon"
+ varh&Z          = mhgt
+ varh@_FillValue = -99
+ varh@lat2d      = lat_c
+ varh@lon2d      = lon_c
+
+ fname = "cfad_" + opt@ens + ".nc"
+ system("rm " + fname)
+ fout = addfile(fname,"c")
+ fout->Band1 = varh
+
+ return(varh)
+end
+
+
 begin
 
 ;User Settings
 ;---------------------------------------------------------------------------
- ;User Settings ---------------------------------------------------------------
- pid         = 0
- lnd         = "HET"
- itype_gscp  = "2483"
- inst        = 5
- opt         = True
- wks_type     = "png"
-;;
- casenames   = (/"bonnRadar_20150705"/)
- pnames      = (/"PROM1","PROM2","PROM3"/)
+ ;pid       = 0 
+
+ ;for PROM3 fopt=False only
+ ;fnv          = (/0, 9,4 ,18,10,5/)    ;18 is 1530 UTC ;400 UTC
+ ;fnsv         = (/0, 7,3 ,16, 8,4/)
+ ;fnev         = (/3,10,6 ,19,11,7/)
+ ;ensv         = (/7, 8,10,11, 12,19/)
+
+ ydates    = (/"20150705","20160513","20170706"/)
+ fnp       = (/11, 15, 18/)    
+ fnsp      = (/ 9, 11,  16/)   
+ fnep      = (/18, 20,  19/) 
+ fcrop     = True ; spatial cropping
+ ;
+ fens      = (/6, 8, 11/)  
+
+ ydate     = ydates(pid)
+ fns       = fnsp(pid)
+ fne       = fnep(pid)
+ ens       = fens(pid)
+
+ case      = "HET2483"
+ diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydate + "/Synth/" + case + "_" + ens 
+
  pvars     = (/"Z~B~H~N~","Z~B~DR~N~","K~B~DP~N~","~F8~r~B~~F10~hv~E~"/)
  punits    = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
-;;;
- casename    = casenames(pid)
- pname       = pnames(pid)
- expname     = lnd + itype_gscp
- sfold       = "runE_" + inst + "_" + expname
- diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/PROM1/" + sfold
- diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
+ opt       = False ;- read netcdf
+
+ wks_type     = "png"
+ glon_idB    = 7.071663 ; Bonn Radar
+ glat_idB    = 50.73052 ;
 
 ;Read netcdf files
 ;---------------------------------------------------------------------------
  if (opt) then
-   ;Read storm mask ------------------------------------------------------------------
-   fsname   = "smask_" + pname + "_" + sfold + ".nc"
-   nc_spath = addfile(diri_spath + "/" + fsname,"r")
-   smsk     = nc_spath->Band1
-   st       = smsk@st
-   et       = smsk@et
 
-   ;Initialize for cropping extent while plotting
-   x = ispan(0,nx-1,1)
-   y = ispan(0,ny-1,1)
-   xmat  = conform_dims((/ny,nx/),x,1)
-   ymat  = conform_dims((/ny,nx/),y,0)
-
-  ;BIG LOOP
-  do nf    = st,et
-
-    ;Read EMVORADO outputs ------------------------------------------------------------
-    varh         = new((/npol,nz,ny,nx/),"float")    ;Initialize variable for plotting
-    varh@_FillValue = -999.99
-    opt      = True
-    opt@profile = -1   ;return 3d data
-    opt@nf      =  nf
-
-    opt@var  = "zh"
-    Zh = read_emvorado_pol(diri_emvo,opt)
-    opt@var  = "zv"
-    Zv = read_emvorado_pol(diri_emvo,opt)
-    opt@var  = "kdp"
-    KDP = read_emvorado_pol(diri_emvo,opt)
-    opt@var  = "rrhv"
-    rRHV = read_emvorado_pol(diri_emvo,opt)
-    opt@var  = "irhv"
-    iRHV = read_emvorado_pol(diri_emvo,opt)
-
-    RHV = ((rRHV^2+iRHV^2)^0.5) / ((Zh*Zv)^0.5)   ;[-]
-    KDP = KDP*1000.                               ;[deg/km]
-    Zh  = 10*log10(Zh/1.)                         ;[dBZ]
-    Zv  = 10*log10(Zv/1.)                         ;[dBZ]
-
-    varh(0,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh)
-    varh(1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv)
-    varh(2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
-    varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
-    delete([/Zh, Zv, KDP, RHV/])
-
-  end do
-
-;Mask the output --------------------------------------------------------
-
- varh = mask(varh,smsk(opt@nf,:,:),1)
+   opt@fstrack = False ;True
+   opt@wfac = 0.15   ;fraction of extent for search area
+   opt@wss  = 0.5    ;SW fraction
+   opt@wse  = 1.+ opt@wss ;NE fraction
+   opt@ext  = (/0.7,0.9/)
+   opt@ngridmax = 180
+   opt@ens   = ens
+   vid = 0
+   var =  record_append(fns,fne,diri,vid,glon_idB,glat_idB,opt)
  else
    if (pid.le.1) then
      nens = ens ;(/5,6,7,8,9/)
@@ -132,7 +238,7 @@ begin
      ;nens = (/7, 8,10,11, 19/)  ;dont change order, 3 indice crop
    end if
    cid  = pid + 1
-   diri = "../scratch/data_prom" + cid + "/"
+   diri = "./scratch/data_prom" + cid + "/"
    vid  = 0
    var =  read_cfad(diri,nens)
 

@@ -16,6 +16,7 @@
 ; plane determines the c-s location (y,x)
 
 ; itype_gscp = microphysics type
+; add EMVORADO
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
@@ -24,10 +25,12 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
 load "$prom_root//functions/cosmo_time_nclf.ncl"
-load "$prom_root/functions/calc_rho_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/storm_tracker_nclf.ncl"
 load "$prom_root/functions/radarline_nclf.ncl"
 load "$PROM/functions/load_radarColors.ncl"
+load "$prom_root/functions/read_emvorado_pol.ncl"
+
 external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
@@ -37,7 +40,11 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  prom=1 
+ pname="PROM1";
  inst=6
+ readBPRO = False    ;
+ itype_gscp  = "HET2683"
+
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
    fns      = 11 ;21 ; 16 ; 21 ;10
@@ -59,9 +66,8 @@ begin
  end if
  end if
 
- itype_gscp  = "HET2483"
  ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
- Ipangles    = (/0.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+ Ipangles    = (/30.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
  ngridmax    = 90*3  ;110 ;90
  ext_pfo     = 90  ;controls extent of c-s
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
@@ -88,7 +94,8 @@ begin
  pv_dash       = (/0, 0, 1, 1, 1, 1/)
  pv_thickness  = pv_dash + 4.
 
- subevent    = itype_gscp + "/runE_" + inst + "_" + itype_gscp
+ sfold       = "runE_" + inst + "_" + itype_gscp 
+ subevent    = itype_gscp + "/" + sfold
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
@@ -200,10 +207,12 @@ begin
  qs            = nc_cos->QS(0,::-1,:,:)    ;kg/kg
  qg            = nc_cos->QG(0,::-1,:,:)    ;kg/kg
  qh            = nc_cos->QH(0,::-1,:,:)    ;kg/kg
- tlc           = qc + qr + qi + qs + qg + qh    ;Precipitation loading
- rho           = calc_rho_nclf(tair,pressure,qv,tlc) ;air density (kgm-3)
+ tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+ rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
 
 ;;;;;;;;;;
+ if (readBPRO) then
+
  diri_input   = diri_dBz + "/input"
  diri_output  = diri_dBz + "/output"
 
@@ -243,12 +252,43 @@ begin
  Zv  = varh(1,:,:,:)
  KDP = varh(2,:,:,:)
  RHV = varh(3,:,:,:)
+
+ else
+
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
+ 
+ ;Read EMVORADO outputs ------------------------------------------------------------
+ nh           = dimsizes(polarimetric)
+ varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
+ varh@_FillValue = -999.99
+ opt      = True
+ opt@profile = -1   ;return 3d data
+ opt@nf      =  fn
+
+ opt@var  = "zh"
+ Zh = read_emvorado_pol(diri_emvo,opt)
+ opt@var  = "zv"
+ Zv = read_emvorado_pol(diri_emvo,opt)
+ opt@var  = "kdp"
+ KDP = read_emvorado_pol(diri_emvo,opt)
+ opt@var  = "rrhv"
+ rRHV = read_emvorado_pol(diri_emvo,opt)
+ opt@var  = "irhv"
+ iRHV = read_emvorado_pol(diri_emvo,opt)
+
+ RHV = ((rRHV^2+iRHV^2)^0.5) / ((Zh*Zv)^0.5)   ;[-]
+ KDP = KDP*1000.                               ;[deg/km]
+ Zh  = 10*log10(Zh/1.)                         ;[dBZ]
+ Zv  = 10*log10(Zv/1.)                         ;[dBZ]
+ end if
+
  varh(0,:,:,:) = where(Zh.lt.-10., varh@_FillValue, Zh)
  varh(1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv) 
  varh(2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
  varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
  delete([/Zh, Zv, KDP, RHV/])
 
+ if (readBPRO) then
 ;-------------------------------------------------------------------------------
 ;#7 Crop data and vertical plane for interpolation
 ;-------------------------------------------------------------------------------
@@ -303,6 +343,17 @@ begin
   print("Y " + min(lat_c) + " " + max(lat_c))
   zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
   tmp_dim = dimsizes(lon_c)
+
+  print(ji)
+  else
+    ji = (/135,216,140,208/)
+    ;ji = (/0, ny-1, 0, nx-1/) 
+    jiv = ji
+    lat_c = lat(ji(0):ji(1),ji(2):ji(3))
+    lon_c = lon(ji(0):ji(1),ji(2):ji(3))
+    zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
+    tmp_dim = dimsizes(lon_c)
+  end if
 
   ; Obtain the radar line of view
   Ipangle = Ipangles(prom-1)
@@ -520,7 +571,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -751,8 +802,8 @@ begin
 
  rescs@trYMaxF                    = hloc ;80
  ;CPS for SPP proposal
- rescs@trXMaxF = xlon(1) ;51.1
- rescs@trXMinF = xlon(0) ;50.7
+ ;rescs@trXMaxF = xlon(1) ;51.1
+ ;rescs@trXMinF = xlon(0) ;50.7
 
  ;
  loc_label                        = ispan(11,99,10)
@@ -824,7 +875,7 @@ begin
  rescsv@vcRefLengthF             = 0.045            ; define length of vec ref
  rescsv@vcGlyphStyle             = "CurlyVector"    ; turn on curly vectors
  rescsv@vcMinDistanceF           = 0.019            ; thin vectors
- rescsv@vcRefAnnoOrthogonalPosF  = -0.16 ;0.46               ; move ref vector down
+ rescsv@vcRefAnnoOrthogonalPosF  = -1.11 ;-0.16 ;0.46               ; move ref vector down
  rescsv@vcLineArrowColor         = "azure3" ;"grey40"
  rescsv@vcLineArrowThicknessF    = 2.
  rescsv@vcMapDirection           = False
@@ -854,7 +905,7 @@ begin
    dumvector                       = gsn_csm_vector(wks, ux_plane_c,uz_plane_c,rescsv)
    overlay(plot(1),dumvector)
  else
-   rescsv@vcRefAnnoString2         = "U"
+   rescsv@vcRefAnnoString2         = "m/s" ;"U"
    dumvector                       = gsn_csm_vector(wks, ux_plane,uz_plane,rescsv)
    overlay(plot(1),dumvector)
  end if
@@ -949,6 +1000,7 @@ begin
 ;Draw panel plots
 ; psres = True
 ; maximize_output(wks,psres)
+; draw(plot(1))
 
  draw(plot)
  frame(wks)

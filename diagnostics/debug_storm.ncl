@@ -7,9 +7,9 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$PROM/functions/shade_terrain.ncl"
-load "./functions/cosmo_time_nclf.ncl"
-load "./functions/calc_rho_nclf.ncl"
-load "./functions/convol.ncl"
+load "$prom_root/functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/calc_rho_nclf.ncl"
+load "$prom_root/functions/convol.ncl"
 
 
 begin

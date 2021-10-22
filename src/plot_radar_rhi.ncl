@@ -50,6 +50,7 @@ begin
    if (updates(pid).eq.1 .and. pid.eq.0) then
      fname = "/daten01/z4/database/PROM/updated/GRIDS//grid_volume_bon_eac_201507051530.nc"
    end if
+   fname = "./grid_volume_bon_new_201605131030.nc" 
    print("Extracting  " + fname)
    Zh  = read_radarnc(fname,0, glon_idB,glat_idB) 
    Zdr = read_radarnc(fname,1, glon_idB,glat_idB)
