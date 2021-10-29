@@ -11,7 +11,6 @@ load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
 
-
 begin
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------
@@ -39,8 +38,8 @@ begin
  ;----
 
  itype     = "HET2483"
- diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1"
- ;diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid)
+ ;diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1"
+ diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid)
  event  = "runE_" + insts(pid) + "_" + itype
  diri_cos  = diri + "/" + itype + "/" + event + "/cosout/"
  diri_cosI = diri + "/" + itype + "/" + event + "/cosout/ivr/"
@@ -290,6 +289,8 @@ begin
  ;For Overlaying plots
  ;--------------------
  reso@cnLevelSelectionMode       = "ExplicitLevels"
+ reso@gsnLeftString = ""
+ reso@gsnRightString = ""
  reso@cnFillOn  = False
  reso@cnLineLabelsOn = False
  reso@cnInfoLabelOn = False
@@ -423,7 +424,7 @@ begin
  ;Draw Panel
  resP = True
  resP@gsnMaximize    = True
- ;resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
+ resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
  ;resP@gsnPanelDebug = True
- gsn_panel(wks,plot,(/2,2/), resP)
+ gsn_panel(wks,plot,(/1,4/), resP)
 end

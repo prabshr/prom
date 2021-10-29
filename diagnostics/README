@@ -1,3 +1,9 @@
+Log: P. Shrestha
+
+Sep 16 2021
+--------------------------------
+storm_path.ncl  --> Plot animation of storm path or integrated path 
+
 Log: P. Shrestha, Nov. 18 2020 
 ---------------------------------
 Model has vertically stretched grids. So, it requires interpolation to plot PPI
@@ -20,7 +26,6 @@ Other diagnostics
 diagnose_atmwater.ncl --> Computes Precipitatble Water, LWP and IWP from model output
 	  
 diagnose_prfo.ncl		  
-edgeDetetction.ncl   --> Edge detection for storm tracking algorithm
    
 diagnose_convfraction.ncl  
 diagnose_QX.ncl		  

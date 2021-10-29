@@ -15,9 +15,9 @@ begin
  diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_20150705/Synth/HET2483_" + inst +"/"
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
- ipol        = 3     ;polarimetric moment to plot
- iz          = 44 ;21(low level) ; 47(mid level) , 41? ;model level to plot
- fn          = 10;8;20    ;file to read
+ ipol        = 1     ;polarimetric moment to plot
+ ;iz          = 44 ;21(low level) ; 47(mid level) , 41? ;model level to plot
+ fn          = 8;20    ;file to read
 
  ipol_1levs  = ispan(5,65,5)*1. -10.
  ipol_2levs  = (/-1.,0,0.1,0.2,0.3,0.4,.5,0.6,0.8,1.0,2.,3.0,4./)
@@ -124,10 +124,10 @@ begin
 
  res@cnLevels                   =  ipol_levs
 
- res@trXMinF = 60
- res@trYMinF = 60
- res@trXMaxF = 140
- res@trYMaxF = 140
+ res@trXMinF = 70 ; 60
+ res@trYMinF = 80 ;60
+ res@trXMaxF = 90 ; 140
+ res@trYMaxF = 105 ;140
 
  res@tiMainString = "Model level " + iz
  plot(0)  = gsn_csm_contour(wks,spol,res)

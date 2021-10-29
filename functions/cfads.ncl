@@ -59,10 +59,10 @@ begin
   var_cfad@units     = unit
   ;
   ;Write netcdf files for quick plotting
-  foutname = "CFAD_" + lname + ".nc"
-  system("rm " + foutname)
-  fout = addfile(foutname,"c")
-  fout->cfad = var_cfad
+;  foutname = "CFAD_" + lname + ".nc"
+;  system("rm " + foutname)
+;  fout = addfile(foutname,"c")
+;  fout->cfad = var_cfad
 
   return(var_cfad)
 end

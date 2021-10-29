@@ -4,6 +4,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/calendar_decode2.ncl"
 ;Flag - fenhance
+;Oct 6 2021 - Figure revised restick set to %M from %m
 
 function enhance_plot_model(wks,ploth,resd,fn,fns,fne,sens,ensv,time,data,opt)
 begin
@@ -132,6 +133,9 @@ begin
   data2 = data_extract(diri2 ,nens,9.59,5)
   data3 = data_extract(diri3 ,nens,11,15)
 
+; Crop data at later stages of storm, where CAF might be affected due to border issue
+
+
 ; Some staistics
   qStd1= 100.*dim_stddev_n(data1,0)/dim_avg_n(data1,0)
   qStd2= 100.*dim_stddev_n(data2,0)/dim_avg_n(data1,0)
@@ -143,7 +147,7 @@ begin
 ;-----------------------------------------------------------------------------------------
  plot = new(3,"graphic")
  wks_type = "png"
- fname_out = "Figure_caf"
+ fname_out = "Figure_caf_revised"
  wks = gsn_open_wks(wks_type,fname_out)
 
  fncps_no = ":F21:"
@@ -193,7 +197,7 @@ begin
  res@tiXAxisString              = "Time (UTC)" 
 
  restick = True
- restick@ttmFormat = "%H:%m"
+ restick@ttmFormat = "%H:%M"
  restick@ttmAxis = "XB"
 
 
@@ -312,7 +316,7 @@ begin
 ;---------Add annotation ----------------------------------------------------------------------
 
  resP = True
- resP@gsnPanelFigureStrings = (/"a)","b)","c)"/)
+ resP@gsnPanelFigureStrings = (/"a) Case One","b) Case Two","c) Case Three"/)
  resP@amJust   = "TopLeft"
 
 ;Add legend

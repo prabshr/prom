@@ -256,4 +256,12 @@ begin
  ;resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/1,4/), resP)
 
+ fname = "radar_" + pid + ".nc"
+ system("rm " + fname)
+ fout = addfile(fname,"c")
+ fout->zdr = zdr_cfad
+ fout->kdp = kdp_cfad
+ fout->rho = rho_cfad
+ fout->zhh = zhh_cfad 
+
 end
