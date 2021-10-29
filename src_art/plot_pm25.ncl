@@ -7,8 +7,8 @@ load "$prom_root/functions/pm25ART.ncl"
 begin
 ;User Settings
 ;--------------------------------------------------------------------------------
-;  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6_HET/cosout/"
-  diri = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
+  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/"
+;  diri = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
 
   fils_cos = systemfunc("ls " + diri + "*.nc")
   ;nf       = 0

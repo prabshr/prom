@@ -179,8 +179,10 @@ begin
   x1     = ispan(1,9,1)*1.0        ;nm
   x2     = ispan(10,95,5)*1.0     ;nm
   x3     = ispan(105,1000,10)*1.0  ;nm
+  x4     = ispan(1010,10000,100)*1.0 ;nm
   xx     = array_append_record (x1, x2, 0) 
-  Dp     = array_append_record (xx, x3, 0)
+  xx2    = array_append_record (xx, x3, 0)
+  Dp     = array_append_record (xx2, x4, 0)
  
   nDp    = dimsizes(Dp)
   nlDp   = new((/nDp,nz/),"float")

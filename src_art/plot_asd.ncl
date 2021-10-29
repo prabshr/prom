@@ -5,7 +5,7 @@ load "$prom_root/functions/lndistART.ncl"
 begin
 ;User Settings
 ;--------------------------------------------------------------------------------
-;  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6_HET/cosout/"
+;  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/"
   diri = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
 
   fils_cos = systemfunc("ls " + diri + "*.nc")
@@ -20,7 +20,7 @@ begin
   opt    = True
   opt@iy = 90
   opt@ix = 150
-  smodes = (/1,2,3,4,5,6,8,9,10,11,12/)
+  smodes = (/1,2,3,4/) ;,5,6,8,9,10,11,12/)
   do im = 0, dimsizes(smodes)-1
     opt@smode = smodes(im)
     if (im.eq.0) then
@@ -36,7 +36,7 @@ begin
   opt@smode = 7
   nlDp_dust = lndistART(fil_cos,opt)
 
-  do iz = 40,40 ;0, dimsizes(Z)-1 
+  do iz = 20,20 ;0, dimsizes(Z)-1 
 ;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ begin
  res@tiXAxisString              = "Dp [nm]"
  res@tiYAxisString             = "dN/dlnDp [cm-3]" 
 
- res@trYMaxF = max(nlDp_dust(:,iz))
+ res@trYMaxF = 1000. ;max(nlDp_dust(:,iz))
  res@trYLog  = True
 
  res@trXMinF = 1.
