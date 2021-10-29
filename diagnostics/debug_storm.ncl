@@ -8,7 +8,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$PROM/functions/shade_terrain.ncl"
 load "$prom_root/functions/cosmo_time_nclf.ncl"
-load "$prom_root/functions/calc_rho_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
 
 
@@ -115,8 +115,8 @@ begin
  qs            = nc_cos->QS(0,::-1,:,:)    ;kg/kg
  qg            = nc_cos->QG(0,::-1,:,:)    ;kg/kg
  qh            = nc_cos->QH(0,::-1,:,:)    ;kg/kg
- tlc           = qc + qr + qi + qs + qg + qh    ;Precipitation loading
- rho           = calc_rho_nclf(tair,pressure,qv,tlc) ;air density (kgm-3)
+ tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+ rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
 
  nh           = dimsizes(hydrometeors)
  varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting

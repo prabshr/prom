@@ -15,8 +15,8 @@ begin
  pid         = 0
  lnd         = "HET"
  itype_gscp  = "2483"
- inst        = 7 
- iz          = 47 ;21(low level) ; 47(mid level) , 41? ;model level to plot
+ ;inst        = 7 
+ ;iz          = 47 ;21(low level) ; 47(mid level) , 41? ;model level to plot
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3"/)
@@ -52,8 +52,8 @@ begin
  fsname   = "smask_" + pname + "_" + sfold + ".nc"
  nc_spath = addfile(diri_spath + "/" + fsname,"r")
  smsk     = nc_spath->Band1
- st       = smsk@st
- et       = smsk@et
+ st       = 11 ;smsk@st + 8
+ et       = st ;smsk@et
 
  ;Initialize for cropping extent while plotting
  x = ispan(0,nx-1,1)
@@ -115,7 +115,7 @@ begin
 
  plot     = new(2,"graphic")
  res      = True
- wks      = gsn_open_wks("png", "Figure_" + pname + "_" + sfold + "_" + opt@nf)
+ wks      = gsn_open_wks("x11", "Figure_" + pname + "_" + sfold + "_" + opt@nf)
  colors   = load_radarColors(0)
  gsn_define_colormap(wks,colors)
 
@@ -164,7 +164,7 @@ begin
  
  resP = True
  gsn_panel(wks,plot,(/1,2/),resP)
-
+ 
  end do    ;BIG LOOP
 
  foutdir = pname + "_" + expname + "_inst" + inst

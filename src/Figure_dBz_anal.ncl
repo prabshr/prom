@@ -20,38 +20,38 @@
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
+	load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+	load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
+	load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
-load "$prom_root//functions/cosmo_time_nclf.ncl"
-load "$prom_root/functions/calcrho_cos_nclf.ncl"
-load "$prom_root/functions/storm_tracker_nclf.ncl"
-load "$prom_root/functions/radarline_nclf.ncl"
-load "$PROM/functions/load_radarColors.ncl"
-load "$prom_root/functions/read_emvorado_pol.ncl"
+	load "$prom_root//functions/cosmo_time_nclf.ncl"
+	load "$prom_root/functions/calcrho_cos_nclf.ncl"
+	load "$prom_root/functions/storm_tracker_nclf.ncl"
+	load "$prom_root/functions/radarline_nclf.ncl"
+	load "$PROM/functions/load_radarColors.ncl"
+	load "$prom_root/functions/read_emvorado_pol.ncl"
 
-external EXT1 "$prom_root/functions/readdim.so"
-external EXT2 "$prom_root/functions/readascii.so"
+	external EXT1 "$prom_root/functions/readdim.so"
+	external EXT2 "$prom_root/functions/readascii.so"
 
-begin
+	begin
 
-;-----------------------------------------------------------------------------------------
-;#1 USER SETTINGS
-;-----------------------------------------------------------------------------------------
- prom=1 
- pname="PROM1";
- inst=6
- readBPRO = False    ;
- itype_gscp  = "HET2683"
+	;-----------------------------------------------------------------------------------------
+	;#1 USER SETTINGS
+	;-----------------------------------------------------------------------------------------
+	 prom=1 
+	 pname="PROM1";
+	 inst=6
+	 readBPRO = True    ;
+	 itype_gscp  = "HET" + itype
 
- if (prom.eq.1) then
-   diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 11 ;21 ; 16 ; 21 ;10
-   fne      = 11 ;21 
-   dns      = 0  ; offset for dbz files
+	 if (prom.eq.1) then
+	   diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+	   ;fns      = 0 ;21 ; 16 ; 21 ;10
+	   ;fne      = 21 ;21 
+	   dns      = 0  ; offset for dbz files
    xlon = (/50.7, 51.1/)
-   offs = -4
+   ;offs = -6 ;-4
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
    fns      = 48 ;19
@@ -67,7 +67,7 @@ begin
  end if
 
  ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
- Ipangles    = (/30.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+ Ipangles    = (/25.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
  ngridmax    = 90*3  ;110 ;90
  ext_pfo     = 90  ;controls extent of c-s
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
@@ -82,7 +82,7 @@ begin
  uzmask      = False
  scale_uz    = 1.0
  hmax        = 15.0        ;km
- fpressure   = 500. ;350.   ;hPa, for pressure plot
+ fpressure   = 550. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB(0)-ext(0),glon_idB(0)-ext(1),glat_idB(0)+ext(0),glon_idB(0)+ext(1)/)
  
@@ -90,7 +90,7 @@ begin
 
  qmin         = tointeger((/-5.,-0.1,-0.5 ,0.8/)*100.)
  qlev         = tointeger((/  5., 0.25, 0.1,0.1/)*100.)
- qmax         = tointeger((/ 55., 2.0, 3. ,1.0/)*100.)
+ qmax         = tointeger((/ 55., 4.0, 3. ,1.0/)*100.)
  pv_dash       = (/0, 0, 1, 1, 1, 1/)
  pv_thickness  = pv_dash + 4.
 
@@ -125,9 +125,9 @@ begin
 ;
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  nfils   = dimsizes(fils_cos)
- nfils    = fne - fns + 1
+ ;nfils    = fne - fns + 1
 
- do fn  = fns, fne ;nfils -1      ;BIG LOOP
+ do fn  = fns,fns ;fns, fne ;nfils -1      ;BIG LOOP
 
  print(fils_cos(fn))
  nc_cos = addfile(fils_cos(fn),"r")
@@ -356,8 +356,9 @@ begin
   end if
 
   ; Obtain the radar line of view
-  Ipangle = Ipangles(prom-1)
+  ;Ipangle = Ipangles(prom-1)
   ;;;CPS 
+  ;glat_id = glat_id + 0.01*offs
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
 ;;CPS
   plane(1) = plane(1) + offs
@@ -385,7 +386,7 @@ begin
   prec_c      = tot_prec(ji(0):ji(1),ji(2):ji(3))
   hail_c      = hail_gsp(ji(0):ji(1),ji(2):ji(3))
 
-  vx_c        = varh_c(ipol,:,:,:)             ;total hydrometeor 
+  vx_c        = varh_c(1,:,:,:)   ;ipol          ;total hydrometeor 
   ; Set precip to zero for fn=0
   if (fn.eq.fns) then
     prec_c = 0.
@@ -571,7 +572,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -802,8 +803,8 @@ begin
 
  rescs@trYMaxF                    = hloc ;80
  ;CPS for SPP proposal
- ;rescs@trXMaxF = xlon(1) ;51.1
- ;rescs@trXMinF = xlon(0) ;50.7
+ rescs@trXMaxF = glat_id + 0.3 ;30. ;xlon(1) ;51.1
+ rescs@trXMinF = glat_id - 0.1 ;10. ;xlon(0) ;50.7
 
  ;
  loc_label                        = ispan(11,99,10)

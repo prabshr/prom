@@ -474,7 +474,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn) + "_" + ixp
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -768,6 +768,29 @@ begin
 
  rescs@cnLineColor                = hydro_colors(5) 
  ;overlay(plot(1),dumqp)
+
+;;New Addition Oct 26
+ spol          = dim_sum_n(varh_plane,0)         ;
+ spol_val      = where(spol.gt.0.01,1.,0)
+ spol_val!0    = "height"
+ spol_val!1    = "longitude"
+ spol_val&longitude = varh_plane&longitude
+
+ ;For Overlaying plots
+ ;--------------------
+ reso = rescs
+ delete(reso@cnLevels)
+ reso@cnLevelSelectionMode       = "ExplicitLevels"
+ reso@cnLinesOn                  = True
+ reso@cnFillOn  = False
+ reso@cnLineLabelsOn = False
+ reso@cnInfoLabelOn = False
+ reso@cnLineColor   = "grey30"
+ reso@cnLevels = (/0.9,1.0,1.1/)
+ reso@gsnLeftString =""
+ reso@gsnRightString=""
+ dumo     = gsn_csm_contour(wks,spol_val,reso)
+ overlay(plot(1),dumo)
 
  ;;Vector overlay along the cross-section
  rescsv@vcRefAnnoFontHeightF     = 0.02

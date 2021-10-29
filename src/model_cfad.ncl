@@ -48,24 +48,23 @@ end
 
 begin
 
-;User Settings
-;---------------------------------------------------------------------------
  ;User Settings ---------------------------------------------------------------
  pid         = 0
  lnd         = "HET"
- itype_gscp  = "2483"
- inst        = 5
+ ;itype  = "2463"
+ inst        = 6 
  opt         = True
- wks_type     = "png"
+ wks_type     = "x11"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3"/)
  pvars     = (/"Z~B~H~N~","Z~B~DR~N~","K~B~DP~N~","~F8~r~B~~F10~hv~E~"/)
  punits    = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
 ;;;
+ npol        = dimsizes(pvars)
  casename    = casenames(pid)
  pname       = pnames(pid)
- expname     = lnd + itype_gscp
+ expname     = lnd + itype
  sfold       = "runE_" + inst + "_" + expname
  diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/PROM1/" + sfold
@@ -74,6 +73,24 @@ begin
 ;Read netcdf files
 ;---------------------------------------------------------------------------
  if (opt) then
+   ;Read Grid data ---------------------------------------------------------------
+   fil_ivr = diri_cosmo + "/cosout/ivr/lfff00000000c.nc"
+   ivr_nc  = addfile(fil_ivr,"r")
+   lon2d   = ivr_nc->lon
+   lat2d   = ivr_nc->lat
+   hhl     = ivr_nc->HHL
+   hsurf   = ivr_nc->HSURF
+
+   ndim    = dimsizes(hhl)
+   nz      = ndim(1)-1
+   ny      = ndim(2)
+   nx      = ndim(3)
+
+   ;Extract model level height from half-level heights
+   mhgt  = (hhl(0,0:nz-1,:,:) + hhl(0,1:nz,:,:) ) *0.5
+   mhgt  = mhgt(::-1,:,:)
+
+
    ;Read storm mask ------------------------------------------------------------------
    fsname   = "smask_" + pname + "_" + sfold + ".nc"
    nc_spath = addfile(diri_spath + "/" + fsname,"r")
@@ -88,11 +105,20 @@ begin
    ymat  = conform_dims((/ny,nx/),y,0)
 
   ;BIG LOOP
-  do nf    = st,et
+  st = 12
+  et = 24
+  print("Manually changing st and et " + st + " " + et)
+  print(" ********* ")
+
+  ntime        = et - st + 1
+  varh         = new((/ntime,npol,nz,ny,nx/),"float") 
+  varh@_FillValue = -999.99
+  varh!2       = "Z"
+  varh&Z       = (mhgt(:,ny/2,nx/2) - hsurf(0,ny/2,nx/2))/1000.  ;height in km a.g.l.
+
+  do nf    = st, et
 
     ;Read EMVORADO outputs ------------------------------------------------------------
-    varh         = new((/npol,nz,ny,nx/),"float")    ;Initialize variable for plotting
-    varh@_FillValue = -999.99
     opt      = True
     opt@profile = -1   ;return 3d data
     opt@nf      =  nf
@@ -113,42 +139,29 @@ begin
     Zh  = 10*log10(Zh/1.)                         ;[dBZ]
     Zv  = 10*log10(Zv/1.)                         ;[dBZ]
 
-    varh(0,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh)
-    varh(1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv)
-    varh(2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
-    varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
+    iens=0
+    varh(nf-st,0,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh)
+    varh(nf-st,1,:,:,:) = where(Zh.lt.-5., varh@_FillValue, Zh-Zv)
+    varh(nf-st,2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
+    varh(nf-st,3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
     delete([/Zh, Zv, KDP, RHV/])
 
+    ;Mask the output --------------------------------------------------------
+    varh(nf-st,:,:,:,:)  = mask(varh(nf-st,:,:,:,:),smsk(nf,:,:),1)
+
   end do
+  
+  ;foutname = "cfad_" + pname + "_" + expname + "_" + inst + ".nc"
+  ;system("rm " + foutname)
+  ;fout = addfile(foutname,"c")
+  ;fout->Band1 = varh
 
-;Mask the output --------------------------------------------------------
+  var = varh
+  delete(varh)
 
- varh = mask(varh,smsk(opt@nf,:,:),1)
  else
-   if (pid.le.1) then
-     nens = ens ;(/5,6,7,8,9/)
-   else
-     nens = (/11/)
-     ;nens = (/7, 8,10,11, 19/)  ;dont change order, 3 indice crop
-   end if
-   cid  = pid + 1
-   diri = "../scratch/data_prom" + cid + "/"
-   vid  = 0
-   var =  read_cfad(diri,nens)
 
-   if (fcrop .and. pid.eq.0) then
-      var(:,:,:,:,134:,0:100) = var@_FillValue
-      var(:,:,:,:,0:65,:)    = var@_FillValue
-   end if
-
-   if (fcrop .and. pid.eq.1) then
-      var(:,:,:,:,108:,:) = var@_FillValue
-   end if
- 
-   if (fcrop .and. pid.eq.2) then
-     var(:,:,:,:,0:47,:) = var@_FillValue
-     var(:,:,:,:,116:,:) = var@_FillValue
-   end if
+   varh =  read_cfad(diri,nens)
 
  end if
 
@@ -156,7 +169,6 @@ begin
 ;--------------------------------------------------------
  copt          = True
  copt@YH95     = False  ;scale CFAD and remove data with low % of N
- copt@vid      = vid
  colors       = load_cfadColors(copt)
  minv         = colors@minv
  maxv         = colors@maxv
@@ -169,6 +181,8 @@ begin
  nx           = ndimv(0) 
  print(nx + " " + ny + "" + nz)
 
+ vid = 0
+ copt@vid      = vid
  if (opt) then
    cvar = var(:,vid,:,:,:)
  else
@@ -196,19 +210,36 @@ begin
 
  vid      = 3
  copt@vid  = vid
-if (opt) then
+ if (opt) then
    cvar = var(:,vid,:,:,:)
  else
    cvar = var(:,:,vid,:,:,:)
  end if
  rho_cfad = cfads(var&Z,cvar,minv(vid),maxv(vid),binw(vid),pvars(vid),punits(vid),copt@YH95)
 
+ ;Debug outputpfile
+ foutname = "CFAD_ZH_" + pname + "_" + sfold + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->Band1 = zhh_cfad
+ foutname = "CFAD_ZDR_" + pname + "_" + sfold + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->Band1 = zdr_cfad
+ foutname = "CFAD_KDP_" + pname + "_" + sfold + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->Band1 = kdp_cfad
+ foutname = "CFAD_RHO_" + pname + "_" + sfold + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->Band1 = rho_cfad
 
 ;Plot
 ;---------------------------------------------------------------------------
  plot = new(4,"graphic")
 
- fname_out = "cfad_model_" + ydate + "_" + fns + "_" + fne + ".nc"
+ fname_out = "cfad_model_" + pname + "_" + sfold + "_" + inst
 
  wks = gsn_open_wks(wks_type,fname_out)
  colors =(/"white","black","white","gray30","gray40","gray50","gray61","gray75", \
