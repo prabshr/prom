@@ -22,6 +22,7 @@ function lndistART(fil_cos,opt)
 
 begin
   smode = opt@smode
+  favg  = opt@favg   
   iy    = opt@iy
   ix    = opt@ix
 
@@ -31,10 +32,32 @@ begin
   end if
 
   nc_cos   = addfile(fil_cos,"r")
+  time     = nc_cos->time
+
+  utc_date = cd_calendar(time, 0)
+ ;
+ ; Store return information into more meaningful variables.
+ ;
+   year   = tointeger(utc_date(:,0))    ; Convert to integer for
+   month  = tointeger(utc_date(:,1))    ; use sprinti 
+   day    = tointeger(utc_date(:,2))
+   hour   = tointeger(utc_date(:,3))
+   minute = tointeger(utc_date(:,4))
+   second = utc_date(:,5)
+ ;
+ ; Write out strings in the format "hhZ dd mmm yyyy".
+ ;
+
+   date_str =  sprinti("%0.4i", year) + "/" + sprinti("%0.2i", month) +"/"+sprinti("%0.2i", day) + \
+               "  " + sprinti("%0.2i", hour) + sprinti("%0.2i", minute) + " UTC"
 
 ;Do not touch below
 ;---------------------------------------------------------------------------------
-  print("Processing " + fil_cos + " at " + iy + " " + ix)
+  if (favg) then
+    print("Processing " + fil_cos + " for domain average")
+  else
+    print("Processing " + fil_cos + " at " + iy + " " + ix)
+  end if
 
   ;art_aerosol_const.f90 parameters
   ;nucl,acc,nucl-mixed,acc-mixed,soot,coarse,(small,medi,big) dust, 
@@ -173,40 +196,62 @@ begin
   Dpd_i@mname     = mname(imode)
  ;Cutoff
   Dpd_i=Dpd_i>1.E-9
-  print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i) + " Mi " + avg(M_i))
+  print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i)/1.E6 + "cm-3 Mi " + avg(M_i))
 
   ;Compute lognormal aerosol size distribution
   x1     = ispan(1,9,1)*1.0        ;nm
   x2     = ispan(10,95,5)*1.0     ;nm
-  x3     = ispan(105,1000,10)*1.0  ;nm
+  x3     = ispan(105,1000,50)*1.0  ;nm
   x4     = ispan(1010,10000,100)*1.0 ;nm
   xx     = array_append_record (x1, x2, 0) 
   xx2    = array_append_record (xx, x3, 0)
   Dp     = array_append_record (xx2, x4, 0)
  
   nDp    = dimsizes(Dp)
-  nlDp   = new((/nDp,nz/),"float")
-  nlDp!0 = "Dp"
-  nlDp!1 = "Z"
-  nlDp&Dp = Dp
-  nlDp&Z  = mhgt
-  nlDp@mode      = smode
-  nlDp@mname     = mname(imode)
+  rnlDp   = new((/2,nDp,nz/),"float")
+  rnlDp!1 = "Dp"
+  rnlDp!2 = "Z"
+  rnlDp&Dp = Dp
+  rnlDp&Z  = mhgt
+  rnlDp@mode      = smode
+  rnlDp@mname     = mname(imode)
+  rnlDp@time      = date_str
 
-  Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm3
-  Dpd    = Dpd_i(0,:,iy,ix)*1.E9  ;nm
+  if (favg) then
+    Ncm3   = N_i(0,:,:,:)/1.E6    ;cm3
+    Dpd    = Dpd_i(0,:,:,:)*1.E9  ;nm
+    ndim   = dimsizes(Dpd)
+    nlDp3d   = new((/nDp,nz,ndim(1),ndim(2)/),"float")
+  else
+    Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm3
+    Dpd    = Dpd_i(0,:,iy,ix)*1.E9  ;nm
+  end if
 
   temp1  = Ncm3/(sqrt(2.*PI)*log(sig_i))
   temp3  = 2.*(log(sig_i))^2.0 
 
   do ib = 0, nDp-1
     temp2  = -1.*(log(Dp(ib)/Dpd))^2.
-    nlDp(ib,:)  = temp1*exp(temp2/temp3) ; cm-3
+    if (favg) then
+      nlDp3d(ib,:,:,:)  = temp1*exp(temp2/temp3) ; cm-3
+    else
+      rnlDp(0,ib,:)  = temp1*exp(temp2/temp3) ; cm-3
+    end if
   end do
+
+  if (favg) then
+    do ib = 0, nDp-1
+    print("Averaging for mode :" + ib)
+    do iz = 0, nz-1
+       rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,:,:))) 
+       rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,:,:))) 
+    end do
+    end do
+  end if
  
   ;Reverse COSMO vertical levels
-  nlDp = nlDp(:,::-1)
+  rnlDp = rnlDp(:,:,::-1)
 
-  return(nlDp)
+  return(rnlDp)
 
 end
