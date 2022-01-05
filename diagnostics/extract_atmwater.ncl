@@ -11,22 +11,27 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- itype_gscp  = "HET2483"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
-; diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
- subevent    = "runE_" + inst + "_" + itype_gscp
-
- diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/"
- diri_cosI   = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
-;
- pressure    = (/500.,700./) ; hPa for wind vectors
- fplot       = False
+ pid         = 0
+ inst        = 6
+ lnd         = "RHD"
+; itype       = 2483
+ casenames   = (/"bonnRadar_20150705"/)
+ pnames      = (/"PROM1","PROM2","PROM3"/)
+;;;
+ casename    = casenames(pid)
+ pname       = pnames(pid)
+ expname     = lnd + itype
+ sfold       = "runE_" + inst + "_" + expname
+ diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
+ diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
  glat_id = (/50.73052/) ;, 50.737497/) ;
  gmarker = (/10,9/)
+ pressure    = (/500.,700./) ; hPa for wind vectors
+ fplot       = False
+
 ;-----------------------------------------------------------------------------------------
 ; SELECT FILES and EXTENTS for Plots
 ;-----------------------------------------------------------------------------------------
@@ -38,7 +43,8 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; READ INVARIANT FIELDS
 ;-------------------------------------------------------------------------------------
- nc_cosI = addfile(diri_cosI +"lfff00000000c.nc","r")
+ fil_ivr = diri_cosmo + "/cosout/ivr/lfff00000000c.nc"
+ nc_cosI = addfile(fil_ivr,"r")
  lat     = nc_cosI->lat
  lon     = nc_cosI->lon
  ndim    = dimsizes(lat)
@@ -59,20 +65,34 @@ begin
  mpcorner      = (/lat2d(0,0),lon2d(0,0),lat2d(ndimc(1)-1,0),lon2d(0,ndimc(2)-1)/)
 
 ;-----------------------------------------------------------------------------------------
+;Read storm mask
+;-----------------------------------------------------------------------------------------
+ fsname   = "smask_" + pname + "_" + sfold + ".nc"
+ nc_spath = addfile(diri_spath + "/" + fsname,"r")
+ smsk     = nc_spath->Band1
+ st       = smsk@st
+ et       = smsk@et
+ ntime    = et - st + 1
+
+ print("st : " + st + " et: " + et)
+
+;-----------------------------------------------------------------------------------------
 ; READ NC FILES
 ;-----------------------------------------------------------------------------------------
- fils_cos  = systemfunc("ls " + diri_cos + "lf*")
+ fils_cos  = systemfunc("ls " + diri_cosmo + "/cosout/lf*")
  nf_cos    = dimsizes(fils_cos)
 
- do nf   = 0, nf_cos - 1
+ do nf   = st, et
 
- if (nf.eq.0) then
+ if (nf.eq.st) then
    ;Initialize variables
    iwv           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
    iwv@lat2d     = lat2d
    iwv@lon2d     = lon2d
    iwv@long_name = "Precipitable Water"   ;or water vapor
    iwv@units     = "mm"
+   iwv@_FillValue = -999.
+   iwv           = iwv@_FillValue
 
    lwp           = iwv
    lwp@long_name = "Liquid Water Path"
@@ -279,11 +299,39 @@ begin
 
  end do
 
- fname = "intStat_" + itype_gscp + "_" + inst + ".nc"
+ ;Crop smask
+ smskc = smsk(:, nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ lwpx   = where(smskc.eq.1, lwp,lwp@_FillValue)
+ iwpx   = where(smskc.eq.1, iwp,iwp@_FillValue)
+
+ lwp1d = dim_sum_n(dim_sum_n(lwpx,2),1)
+ iwp1d = dim_sum_n(dim_sum_n(iwpx,2),1)
+
+ lwp1d!0 = "time"
+ lwp1d&time = ispan(0,nf_cos-1,1)
+
+ iwp1d!0 = "time"
+ iwp1d&time = ispan(0,nf_cos-1,1)
+
+ lwp1ds  = lwp1d
+ iwp1ds  = iwp1d
+ lwpx   = where(smskc.eq.1, lwp@_FillValue,lwp)
+ iwpx   = where(smskc.eq.1, iwp@_FillValue,iwp)
+
+ lwp1ds = dim_sum_n(dim_sum_n(lwpx,2),1)
+ iwp1ds = dim_sum_n(dim_sum_n(iwpx,2),1)
+
+ 
+ fname = "intStat_" + expname + "_" + inst + ".nc"
  system("rm " + fname)
  fout = addfile(fname,"c")
- fout->IWV = iwv
- fout->LWP = lwp
- fout->IWP = iwp
+; fout->IWV = iwv
+; fout->LWP = lwp
+; fout->IWP = iwp
+ fout->LWP_STORM = lwp1d
+ fout->IWP_STORM = iwp1d
+ fout->LWP_NSTORM = lwp1ds
+ fout->IWP_NSTORM = iwp1ds
+; fout->smsk = smskc
 
 end

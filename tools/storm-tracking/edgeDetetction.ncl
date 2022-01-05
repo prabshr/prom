@@ -184,8 +184,7 @@ begin
            dp = cind(ic)
            if (jp(ctr-1).ne.jjs(dp) .and. ip(ctr-1).ne.iis(dp) .and. ucdata(jjs(dp)+drc(dp,0),iis(dp)+drc(dp,1)).eq.1) then
              iloc1 = dp
-           end if
-
+           end if 
 ;           if (dp.eq.0 .and. jp(ctr-1).ne.jjs(dp) .and. ip(ctr-1).ne.iis(dp) .and. ucdata(jjs(dp)+1,iis(dp)).eq.1) then
 ;             iloc1 = dp
 ;           else if (dp.eq.1 .and. jp(ctr-1).ne.jjs(dp) .and. ip(ctr-1).ne.iis(dp) .and. ucdata(jjs(dp)-1,iis(dp)).eq.1) then
@@ -349,12 +348,12 @@ begin
   ;User Settings
   ;----------------------------------------------------------------------
   pid       = 0            ;Experiment ID
-  expname   = "HET2483"    ;Perturbation ID
+  expname   = "HETART"    ;Perturbation ID
   ;inst     = 8
 
   ;bopt = False
   ;bopt@bdr = False
-  pnames    = (/"PROM1","PROM2","PROM3"/)
+  pnames    = (/"ARTPROM1","PROM2","PROM3"/)
   ;Pre-processing
   ;----------------------------------------------------------------------
   fname    = pnames(pid) + "_runE_" + inst + "_" + expname  
@@ -384,13 +383,20 @@ begin
     ndim     = dimsizes(zh)
     ;st = 5 
     ;et = dimsizes(jd)-1 
+    if (st.gt.0) then
+      zh(0:st-1,:,:) = 0
+    end if
     do it = st,et
       print("Processing " + it)
       ; val  = bucketfill(jd(it),id(it),zh(it,:,:),0,bopt)
       ;val  = thinedge(zh(it,:,:))
-      val  = trackedge(jd(it),id(it),zh(it,:,:))
-      val  = (/scanfill(val)/)
-      zh(it,:,:) = (/val/)
+      if (jd(it).ne.-999 .and. id(it).ne.-999) then
+        val  = trackedge(jd(it),id(it),zh(it,:,:))
+        val  = (/scanfill(val)/)
+        zh(it,:,:) = (/val/)
+      else
+        zh(it,:,:) = 0. 
+      end if
     end do
     fname_out = "smask_" + fname +".nc"
     zh@long_name = "Storm Mask"

@@ -4,7 +4,8 @@
 ; component of the model 
 ; Average H and LE from 0600 to 1700 hrs
 ; See how ind_avg is computed ...
-
+; Outputs first day average spatial pattern of H and LE
+;          time-series of domain average H and LE...
 ; 26.03.2012 Created 
 ; 20.04.2012 Added Flags readcos, readclm, readpfl
 ;======================================================
@@ -27,7 +28,10 @@ begin
 ;-----------------------------------------------------------------------------------------
 
 ;;MODEL OUTPUT
- itype_gscp  = "HET2483"
+ lnd         = "RHD"
+ inst        = 6
+ ;itype       = 2483
+ itype_gscp  = lnd + tostring(itype) ;"HET2483"
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
  subevent    = "runE_" + inst + "_" + itype_gscp
 
@@ -40,7 +44,7 @@ begin
  glat_id = (/50.73052, 50.6/) ;
  gmarker = (/10,9/)
 
- fplot   = True ;False
+ fplot   = False
  ;fnctr   = 15
 ;-----------------------------------------------------------------------------------------
 ; READ COSMO GRIDS
@@ -90,7 +94,10 @@ begin
 
  br1   = avg(br_avg)
  br2   = stddev(br_avg)
- print("Bowen Ratio :" + br1 + " " + br2)
+ tur1   = avg(shf_avg+lhf_avg)
+ tur2   = stddev(shf_avg+lhf_avg)
+ print("Bowen Ratio :" + br1 + "+-" + br2)
+ print("Total turbulent Flux: " + tur1 + "+-1" + tur2)
 
  ;Debug Output file
  fname = "flx_" + itype_gscp + "_" + inst + ".nc"
@@ -99,6 +106,8 @@ begin
  fout->time = tim_clm
  fout->H    =  dim_avg_n(dim_avg_n(shf,2),1)
  fout->LE   =  dim_avg_n(dim_avg_n(lhf,2),1) 
+ fout->Hpat = shf_avg
+ fout->LEpat = lhf_avg
  ;
 
  if (fplot) then

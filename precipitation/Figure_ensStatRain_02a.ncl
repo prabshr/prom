@@ -12,9 +12,14 @@ begin
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
 ; itype_gscp = (/"HET2483","TGR2483","CUR2483","RADOLAN"/)
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
- itype_gscp = (/"HET2483","RADOLAN"/)
- nes        = 0 
- nee        = 19 
+
+; itype_gscp = (/"HET2483","RADOLAN"/)
+ itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
+                "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
+                "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
+                "RADOLAN"/)
+ nes        = 6 ;0 
+ nee        = 6 ;19 
  fenscolor  = False
 
  ;PDF parameters
@@ -31,7 +36,7 @@ begin
  plot         = new(2,"graphic")
 
  fnameout     = "Figure_histo_" + expid
- wks          = gsn_open_wks("x11",fnameout)
+ wks          = gsn_open_wks("png",fnameout)
  res          = True
 
 ;gsn Resources
@@ -179,8 +184,8 @@ begin
  ires@trYMaxF = 20.
 
  ires@tiYAxisString = "Avg. Precip (mm)"
- ires@tiXAxisString = "Ens. Members / RADOLAN"
-
+ ;ires@tiXAxisString = "Ens. Members / RADOLAN"
+ ires@tiXAxisString = "HET - EHD - RHD - RADOLAN"
  plot(1) = gsn_csm_xy (wks,pstat(0,:),pstat(1,:),ires)
 
  ;add stddev

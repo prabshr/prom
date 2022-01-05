@@ -3,22 +3,14 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
-;Diagnostic plots of ensemble CAF
+;Diagnostic plots of LWP and IWP 
 
 function data_extract(diri,opt)
   begin
   print("Extracting "  + diri)
-  if (opt@ver.eq.1) then
-    fname  = diri + "/CAF_" + opt@lnd + opt@itype + "_" + opt@nf + ".nc"
-  else if (opt@art.eq.1) then
-    fname = diri + "/CAF_ARTPROM1_runE_" + opt@nf + "_" + opt@lnd + opt@itype + ".nc"
-  else
-    fname = diri + "/CAF_PROM1_runE_" + opt@nf + "_" + opt@lnd + opt@itype + ".nc"
-  end if
-  end if
+  fname  = diri + "/intStat_" + opt@lnd + opt@itype + "_" + opt@nf + ".nc"
   nc_fil = addfile(fname,"r")
-    ;print(nf + " " + fname)
-  data = nc_fil->Band1    ;CAF [-]
+  data = (/nc_fil->LWP_STORM/)
   ndim = dimsizes(data)
   time = opt@sthr + ispan(0,ndim-1,1)*opt@nt/60.    ;5-15 minute interval data
   time@units = "hours since 0000-01-01 00:00:00"
@@ -28,22 +20,19 @@ function data_extract(diri,opt)
 end
 
 begin
-  diri1 = "$PROM/scratch/data_prom1/"
-  diri2 = "$PROM/scratch/data_v2/"
+  diri = "$PROM/scratch/data_v2/atmwat/"
  
   ; Read processed synthetic data PROM1,2,3, st= start times, 14, 9.59, 11 UTC, nt = 5 min interval
   opt = True
-  opt@nf = 6      ;ens no
+  opt@nf   = 6
   opt@nt   = 5    ;data interval , mins
   opt@sthr = 14   ;start hour
   opt@lnd  = "HET"
   opt@itype = "2483"
   opt@art = 0
 
-  opt@ver = 2 
-  temp = data_extract(diri2 ,opt)
+  temp = data_extract(diri ,opt)
   ndim = dimsizes(temp)
-
   itypes = (/2483,2463,2493,2583,2563,2593,2683,2663,2693/) ;, \
             ;  2483,2463,2493,2583,2563,2593,2663,2663, \
             ;  2483,2463,2493,2583,2563,2593,2663,2693/)
@@ -55,12 +44,10 @@ begin
   dpats  = (/0,0,0,0,0,0,0,0,0/) ;, \
             ; 0,0,0,0,0,0,0,0,0, \
             ; 0,0,0,0,0,0,0,0,0/)
-  dpats  = (/0,0,0,2,2,2,3,3,3/)
+  dpats  = (/0,0,0,2,2,2,3,3,3/) 
   lnds   = (/"HET","HET","HET","HET","HET","HET","HET","HET","HET"/) ;, \
             ;   "RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD", \
              ;     "EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD"/)
-
-
 
   nprf  = dimsizes(itypes)
   data = new((/nprf,ndim/),"float")
@@ -68,10 +55,8 @@ begin
   do ip = 0, nprf-1
     opt@itype = itypes(ip)
     opt@lnd = lnds(ip)
-    data(ip,:) = data_extract(diri2 ,opt)
+    data(ip,:) = data_extract(diri ,opt)
   end do
-  ;opt@ver = 1
-  ;data2 = data_extract(diri1 ,opt)
 
 
   wks_type = "x11"
@@ -89,9 +74,31 @@ begin
   res@tiYAxisString              = "Convective Area Fraction [-]"
   res@tiXAxisString              = "Time (UTC)"
 
-  res@vpWidthF = 0.7
 ;PROM1 ------------
   plot                        = gsn_csm_xy (wks,data&time,data,res) ; create plot
+
+ ; Add legend
+ lgres                    = True
+ lgres@lgLineColors       = colors(0:2)
+ lgres@lgLineThicknessF   = 3.
+ lgres@lgDashIndexes      = (/0,0,0/)
+ lgres@lgItemType         = "Lines"
+ lgres@lgLabelFontHeightF = 0.10
+ lgres@vpWidthF           = 0.15
+ lgres@vpHeightF          = 0.1
+ lgres@lgPerimOn          = False
+   lbid1 = gsn_create_legend(wks,3,(/"con. CN","mar. CN","poll. CN"/), lgres)
+   lgres@lgLineColors       = (/"black","black","black"/)
+   lgres@lgDashIndexes      = (/0,2,3/)
+   lbid2 = gsn_create_legend(wks,3,(/"def. IN","low IN","high IN"/), lgres)
+
+ amres = True
+ amres@amParallelPosF   = 0.2
+ amres@amOrthogonalPosF = -0.35
+ annoid1 = gsn_add_annotation(plot,lbid1,amres)
+ amres@amParallelPosF   = -0.2
+ annoid3 = gsn_add_annotation(plot,lbid2,amres)
+
 
   ;res@xyLineColor                = "black"
   ;dum      = gsn_csm_xy (wks,data1&time,data1,res) ; create plot

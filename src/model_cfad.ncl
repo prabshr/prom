@@ -51,10 +51,10 @@ begin
  ;User Settings ---------------------------------------------------------------
  pid         = 0
  lnd         = "HET"
- ;itype  = "2463"
+ itype       = "2583"
  inst        = 6 
  opt         = True
- wks_type     = "x11"
+ wks_type     = "png"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3"/)
@@ -67,7 +67,7 @@ begin
  expname     = lnd + itype
  sfold       = "runE_" + inst + "_" + expname
  diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/PROM1/" + sfold
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
 
 ;Read netcdf files
@@ -161,6 +161,8 @@ begin
 
  else
 
+   diri = "./"
+   nens = 0
    varh =  read_cfad(diri,nens)
 
  end if

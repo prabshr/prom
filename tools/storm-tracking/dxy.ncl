@@ -3,17 +3,17 @@
 begin
 ;--User Settings --------------------------------------------------
   pid       = 0            ;Experiment ID
-  expname   = "HET2483"    ;Perturbation ID
+  expname   = "HETART"    ;Perturbation ID
    ;inst    = 8
 
   ;First cell
-  t  = 2
-  iy = 131
-  ix = 136
+  t  = 0   ;14 
+  iy = 147; 128 
+  ix = 128 ;157
 
   ;Search box size
   bs = 40
-  pnames   = (/"PROM1","PROM2","PROM3"/)
+  pnames   = (/"ARTPROM1","PROM2","PROM3"/)
   fname    = pnames(pid) + "_runE_" + inst + "_" + expname
 ;------------------------------------------------------------------
 

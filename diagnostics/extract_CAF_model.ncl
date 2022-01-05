@@ -15,8 +15,8 @@ begin
 ;User Settings ---------------------------------------------------------------
  pid         = 0
  lnd         = "HET"
- ;itype       = "2483"
- ;inst        = 7
+ ;itype       = "ART"
+ inst        = 6 
  iz          = 34 ;21(low level) ; 47(mid level) , 41? ;model level to plot
  dbz_th      = 40.  ;dBZ
  dbz_min     =  0.  ; -5.  ;dBZ
@@ -32,7 +32,7 @@ begin
  expname     = lnd + itype
  sfold       = "runE_" + inst + "_" + expname
  diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/PROM1/" + sfold
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
 
 ;Read Grid data ---------------------------------------------------------------

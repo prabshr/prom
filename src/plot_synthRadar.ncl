@@ -144,13 +144,16 @@ begin
 
  res      = True
  ppid     = pid + 1
- wks      = gsn_open_wks("x11", "Figure_case" + ppid + "_i" + inst + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("png", "Figure_case" + ppid + "_i" + inst + "_t" + fn + "_ix" + ix)
 
  colors   = load_radarColors(0)
 
  gsn_define_colormap(wks,colors)
 
- res      = True
+ ;CPS
+ res@vpXF = 0.4
+ res@gsnMaximize = False
+
  ;gsn Resources
  ;---------------
  res@gsnDraw                    = False
@@ -379,7 +382,7 @@ begin
       res3@tmXBMode   = "Explicit"
       res3@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20)) 
       res3@tmXBLabels = tointeger((res3@tmXBValues)*100)/100.
-      res3@tmXBLabelsOn = False
+ ;CPS     res3@tmXBLabelsOn = False
 
       res3@lbOrientation = "Vertical"
 
@@ -388,8 +391,8 @@ begin
         res3@tmYLLabelsOn = True
         res3@tiYAxisString = "Height [km]"
       else
-        res3@tiYAxisString = ""
-        res3@tmYLLabelsOn = False
+;CPS        res3@tiYAxisString = ""
+;CPS        res3@tmYLLabelsOn = False
       end if
 
       plot(ip)  = gsn_csm_contour(wks,spol,res3)
@@ -425,16 +428,20 @@ begin
  txres@txFontHeightF = 0.016                    ; text font height
  txres@txJust        = "CenterLeft"              ; Default is "CenterCenter".
 
- gsn_text_ndc(wks,"a)",.05,.77,txres)
- gsn_text_ndc(wks,"b)",.05,.58,txres)
- gsn_text_ndc(wks,"c)",.05,.40,txres)  ;0.39
+;CPS  gsn_text_ndc(wks,"a)",.05,.77,txres)
+;CPS  gsn_text_ndc(wks,"b)",.05,.58,txres)
+;CPS  gsn_text_ndc(wks,"c)",.05,.40,txres)  ;0.39
 
+ 
+; just draw ZDR c-s oknly
+ draw(plot(9))
+ frame(wks)
 
  resP = True
  resP@gsnMaximize    = True 
  ;resP@gsnPanelXF = (/-1,0.36,0.64,-1,0.36,0.64,-1,0.36,0.64/)
  resP@gsnPanelXF = (/-1,0.26,0.46,.66,-1,0.26,0.46,.66,-1,0.26,0.46,.66/)  ;for 4 columns  
  ;resP@gsnPanelDebug = True
- gsn_panel(wks,plot,(/nz,npol/), resP)
+; gsn_panel(wks,plot,(/nz,npol/), resP)
 
 end

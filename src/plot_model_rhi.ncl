@@ -15,12 +15,12 @@ begin
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------
  ;pid       = 0 
- opt       = 1   ;0-NX, 1-QX , 2-DX
+ ;opt       = 2   ;0-NX, 1-QX , 2-DX
 
  ydates    = (/"20150705","20160513","20170706"/)
 
  insts     = (/6, 8, 11/)
- fns       = (/11,34,18/) - 11
+ fns       = (/11,34,18/) 
  ixs       = (/90,124,95/) + 65  ;Need to add offset due to clipping of radar
 
  ;;extract_ascii clips
@@ -37,7 +37,7 @@ begin
  ;lat_ext1  = (/51.6, -1, -1/)
  ;----
 
- itype     = "HET2483"
+ itype     = "HET2593"
  ;diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1"
  diri      = "/daten04/pshrestha/shared-data/bonnRadar_" + ydates(pid)
  event  = "runE_" + insts(pid) + "_" + itype
@@ -421,10 +421,13 @@ begin
  txres@txJust        = "CenterLeft"     
  gsn_text_ndc(wks,"d)",.05,.65,txres)
 
+ draw(plot(xx))
+ frame(wks)
+
  ;Draw Panel
  resP = True
  resP@gsnMaximize    = True
  resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
  ;resP@gsnPanelDebug = True
- gsn_panel(wks,plot,(/1,4/), resP)
+;CPS  gsn_panel(wks,plot,(/1,4/), resP)
 end

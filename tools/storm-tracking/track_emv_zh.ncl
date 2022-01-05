@@ -17,7 +17,9 @@ begin
  ;User Settings 
  ;---------------------------------------------------------------------------------
  pid       = 0            ;Experiment ID
- expname   = "HET2483"    ;Perturbation ID
+ lnd       = "EHD"
+ itype     = "2483"
+ expname   = lnd + itype    ;Perturbation ID
  Zh_thr    = -5.0   ;dBz
  fgauss    = True         ;Default
  fdeep     = True         ;Deep Convective Storm or Shallow
@@ -33,7 +35,7 @@ begin
  casename    = cnames(pid)
  pname       = pnames(pid)
  sfold       = "runE_" + inst + "_" + expname
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" +  sfold
  diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
 
 ;First extract geographical data

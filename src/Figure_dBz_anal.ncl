@@ -20,36 +20,38 @@
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-	load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-	load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
-	load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
-	load "$prom_root//functions/cosmo_time_nclf.ncl"
-	load "$prom_root/functions/calcrho_cos_nclf.ncl"
-	load "$prom_root/functions/storm_tracker_nclf.ncl"
-	load "$prom_root/functions/radarline_nclf.ncl"
-	load "$PROM/functions/load_radarColors.ncl"
-	load "$prom_root/functions/read_emvorado_pol.ncl"
+load "$prom_root//functions/cosmo_time_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
+load "$prom_root/functions/storm_tracker_nclf.ncl"
+load "$prom_root/functions/radarline_nclf.ncl"
+load "$PROM/functions/load_radarColors.ncl"
+load "$prom_root/functions/read_emvorado_pol.ncl"
 
-	external EXT1 "$prom_root/functions/readdim.so"
-	external EXT2 "$prom_root/functions/readascii.so"
+external EXT1 "$prom_root/functions/readdim.so"
+external EXT2 "$prom_root/functions/readascii.so"
 
-	begin
+begin
 
-	;-----------------------------------------------------------------------------------------
-	;#1 USER SETTINGS
-	;-----------------------------------------------------------------------------------------
-	 prom=1 
-	 pname="PROM1";
-	 inst=6
-	 readBPRO = True    ;
-	 itype_gscp  = "HET" + itype
+;-----------------------------------------------------------------------------------------
+;#1 USER SETTINGS
+;-----------------------------------------------------------------------------------------
+ prom=1
+ pname="PROM1";
+ inst=6
+ readBPRO = False ;True    ;
+ lnd = "HET"
+ itype = "2593"
+ itype_gscp  = lnd + itype
 
-	 if (prom.eq.1) then
-	   diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-	   ;fns      = 0 ;21 ; 16 ; 21 ;10
-	   ;fne      = 21 ;21 
-	   dns      = 0  ; offset for dbz files
+ if (prom.eq.1) then
+   diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+   fns      = 0 ;26 ;21 ; 16 ; 21 ;10
+   fne      = 20 ;21 
+   dns      = 0  ; offset for dbz files
    xlon = (/50.7, 51.1/)
    ;offs = -6 ;-4
  else if (prom.eq.2) then
@@ -62,18 +64,26 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
    fns     = 0 ;40 ;12
    fne     = 0; 48
    dns     = 0 ;12 ; offset for dbz files
+ else if (prom.eq.4) then
+   diri    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705"
+   fns     = 16 ;40 ;12
+   fne     = 16; 48
+   dns     = 0 ;12 ; offset for dbz files
+   ;offs    = 0
+ end if
  end if
  end if
  end if
 
  ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
- Ipangles    = (/25.,0.,0./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+ Ipangles    = (/38.,0.,0.,27./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
  ngridmax    = 90*3  ;110 ;90
  ext_pfo     = 90  ;controls extent of c-s
  iopt        = True ;False    ;always True for accurate WRF interpolatoin
  fstrack     = True ;False
 
  glon_idB    = (/7.071663, 7.489/) ; Bonn Radar
+ ;CPS EHD2663, Ipangle = 25. fns=20 ,fstrack = False , ext = *2.0 glon_idB = (/6.79,7.483/) ;
  glat_idB    = (/50.73052, 50.659/) ;
 
  extB        = 0.91     ;extent in degrees
@@ -99,6 +109,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
+
  dataFillVal    = -999        ;Polarimetric flags
 
 ;-----------------------------------------------------------------------------------------
@@ -127,7 +138,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
  nfils   = dimsizes(fils_cos)
  ;nfils    = fne - fns + 1
 
- do fn  = fns,fns ;fns, fne ;nfils -1      ;BIG LOOP
+ do fn  = fns,fne ;fns, fne ;nfils -1      ;BIG LOOP
 
  print(fils_cos(fn))
  nc_cos = addfile(fils_cos(fn),"r")
@@ -186,11 +197,12 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
    glat_id    = glatlon(0)
    glon_id    = glatlon(1)
 
-   print("Cross-section through " + glon_id)
+   print("Cross-section through " + glat_id + " " + glon_id)
 
    print("Updating mpcorner and mpcornerw")
    mpcorner   = (/glat_id-wss*ext(0)     ,glon_id-wss*ext(1)     ,glat_id+wse*ext(0)     ,glon_id+wse*ext(1)/)
    mpcornerw  = (/glat_id-wss*wfac*ext(0),glon_id-wss*wfac*ext(1),glat_id+wse*wfac*ext(0),glon_id+wse*wfac*ext(1)/)
+   print(" mpcorner " + mpcorner)
 
  else
    glat_id = glat_idB(0)
@@ -255,8 +267,8 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 
  else
 
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
- 
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
+
  ;Read EMVORADO outputs ------------------------------------------------------------
  nh           = dimsizes(polarimetric)
  varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
@@ -288,20 +300,9 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
  varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
  delete([/Zh, Zv, KDP, RHV/])
 
- if (readBPRO) then
 ;-------------------------------------------------------------------------------
 ;#7 Crop data and vertical plane for interpolation
 ;-------------------------------------------------------------------------------
- nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
- sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
- eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
- ;change of reference from model to radar domain
- jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
-
- print("Check if the radar corners are correctly extracted ...")
- print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
- print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
-
 
   ji      = region_ind (lat,lon, mpcorner(0),mpcorner(2),mpcorner(1),mpcorner(3))
   ngrid   = ji(1)-ji(0)+1
@@ -330,7 +331,33 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
     ji(2) = ji(3) - ngrid + 1
     print("X-Boundary reached ...")
   end if
-  jiv   = (/ji(0)-jinv(0),ji(1)-jinv(0),ji(2)-jinv(2),ji(3)-jinv(2)/) + 1
+
+
+  if (readBPRO) then
+    nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
+    sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
+    eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
+    ;change of reference from model to radar domain
+    jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
+
+    print("Check if the radar corners are correctly extracted ...")
+    print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
+    print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
+    ; Add offset 
+    jiv   = (/ji(0)-jinv(0),ji(1)-jinv(0),ji(2)-jinv(2),ji(3)-jinv(2)/) + 1
+  else
+    jiv   = ji
+  end if
+
+  if (prom.eq.4 .and. fns.eq.16) then
+   print("Hardwire setting")
+  ;ART PROM setting
+  glat_id = 50.8799
+  glon_id = 7.14264 +0.09
+  mpcorner = (/50.6999,6.90264,51.5099,7.98264/)
+  jiv = (/145,226,144,212/)
+  ji  = jiv
+  end if
 
   print("Crop indices ...")
   print(" " + ji)
@@ -344,19 +371,8 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
   zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
   tmp_dim = dimsizes(lon_c)
 
-  print(ji)
-  else
-    ji = (/135,216,140,208/)
-    ;ji = (/0, ny-1, 0, nx-1/) 
-    jiv = ji
-    lat_c = lat(ji(0):ji(1),ji(2):ji(3))
-    lon_c = lon(ji(0):ji(1),ji(2):ji(3))
-    zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
-    tmp_dim = dimsizes(lon_c)
-  end if
-
   ; Obtain the radar line of view
-  ;Ipangle = Ipangles(prom-1)
+  Ipangle = Ipangles(prom-1)
   ;;;CPS 
   ;glat_id = glat_id + 0.01*offs
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
@@ -572,7 +588,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -803,7 +819,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 
  rescs@trYMaxF                    = hloc ;80
  ;CPS for SPP proposal
- rescs@trXMaxF = glat_id + 0.3 ;30. ;xlon(1) ;51.1
+ rescs@trXMaxF = glat_id + 0.4 ;0.3 ;30. ;xlon(1) ;51.1
  rescs@trXMinF = glat_id - 0.1 ;10. ;xlon(0) ;50.7
 
  ;

@@ -50,7 +50,7 @@ begin
    if (updates(pid).eq.1 .and. pid.eq.0) then
      fname = "/daten01/z4/database/PROM/updated/GRIDS//grid_volume_bon_eac_201507051530.nc"
    end if
-   fname = "./grid_volume_bon_new_201605131030.nc" 
+   ;fname = "./grid_volume_bon_new_201605131030.nc" 
    print("Extracting  " + fname)
    Zh  = read_radarnc(fname,0, glon_idB,glat_idB) 
    Zdr = read_radarnc(fname,1, glon_idB,glat_idB)
@@ -90,7 +90,7 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_" + radar +  "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("png", "Figure_" + radar +  "_t" + fn + "_ix" + ix)
 
  colors = load_radarColors(0)
  colors(2) = "white"
@@ -214,7 +214,7 @@ begin
  resP@gsnMaximize    = True
  ;resP@gsnPanelDebug = True
  resP@gsnPanelXF = (/-1,0.29,0.53,0.77/)
- gsn_panel(wks,plot,(/1,4/), resP)
+  gsn_panel(wks,plot,(/1,4/), resP)
 
  fout = addfile("temp.nc","c")
  fout->ZDR = Zdr_cs

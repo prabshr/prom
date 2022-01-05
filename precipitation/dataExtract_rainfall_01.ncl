@@ -26,15 +26,15 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;expid= 1,2,3   ;for RADOLAN
- do inst = 0,19
+ do inst = 6,6 ;0,19
  ;;MODEL OUTPUT
- itype_gscp  = "HET2483"
+ ;itype_gscp  = "RHD2483"
  ;CLUMA2
  diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
+; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
+; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
  ;JUWELS
- diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1/"
+; diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1/"
 
  subevent    = "runE_" + inst + "_" + itype_gscp
 

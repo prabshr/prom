@@ -14,14 +14,20 @@ load "$PROM/functions/cosmo_time_nclf.ncl"
 load "$PROM/functions/calcrho_cos_nclf.ncl"
 load "$PROM/functions/storm_tracker_nclf.ncl"
 load "$PROM/functions/radarline_nclf.ncl"
+;Log: Nov. 1 2021, Addition of ART directory
+
 begin
 
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- prom=1
+ prom=4
  inst=6
  opt=1
+ lnd = "HET"
+ itype = "ART"
+ itype_gscp  = lnd + itype
+
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
    ;ixp      = 1  ;which hydrometeor to explore 
@@ -38,11 +44,16 @@ begin
    diri    = "//daten04/pshrestha/shared-data/bonnRadar_20170706"
    fns     = 0 ;12+12
    fne     = 0 ;48
+ else if (prom.eq.4) then
+   diri    = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+   fns     = 16 
+   fne     = 16 
+   xlon = (/50.7, 51.1/)
+   ;offs    = 0
  end if
  end if
  end if
-
- itype_gscp  = "HET2483"
+ end if
 
  ext         = (/0.45,0.6/)* 1.0 ;2.0 ;3.0   ;*1.2
  ngridmax    = 90*3  ;110 ;90
@@ -53,14 +64,14 @@ begin
  glat_idB    = 50.73052 ;
  extB        = 0.91     ;extent in degrees
 
- Ipangles    = (/0.,0.,0./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
- qprom       = (/4.0, 3.0, 3.0/)    ;max for vertical profile
+ Ipangles    = (/0.,0.,0.,27./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
+ qprom       = (/4.0, 3.0, 3.0,3.0/)    ;max for vertical profile
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
  uzmask      = False
  scale_uz    = 1.0
  hmax        = 15.0        ;km
- fpressure   = 500. ;350.   ;hPa, for pressure plot
+ fpressure   = 550. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB-ext(0),glon_idB-ext(1),glat_idB+ext(0),glon_idB+ext(1)/)
  
@@ -273,6 +284,15 @@ begin
     print("X-Boundary reached ...")
   end if
 
+ if (prom.eq.4 .and. fns.eq.16) then
+   print("Hardwire setting")
+  ;ART PROM setting
+  glat_id = 50.8799
+  glon_id = 7.14264 +0.09
+  mpcorner = (/50.6999,6.90264,51.5099,7.98264/)
+  ji = (/145,226,144,212/)
+  end if
+
   print("Crop indices ")
   print(" " + ji)
  
@@ -474,7 +494,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn) + "_" + ixp
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -703,8 +723,8 @@ begin
  rescs@tiYAxisString                 = "Height (km)"
 
  rescs@trYMaxF                    = hloc ;80
- rescs@trXMinF                    = xlon(0) ;50.8
- rescs@trXMaxF                    = xlon(1) ;51.0
+ rescs@trXMaxF = glat_id + 0.4 ;0.3 ;30. ;xlon(1) ;51.1
+ rescs@trXMinF = glat_id - 0.1 ;10. ;xlon(0) ;50.7
 
  loc_label                        = ispan(11,99,10)
  rescs@tmYLMode                   = "Explicit"
@@ -798,7 +818,7 @@ begin
  rescsv@vcRefLengthF             = 0.045            ; define length of vec ref
  rescsv@vcGlyphStyle             = "CurlyVector"    ; turn on curly vectors
  rescsv@vcMinDistanceF           = 0.019            ; thin vectors
- rescsv@vcRefAnnoOrthogonalPosF  = -0.16 ;0.46               ; move ref vector down
+ rescsv@vcRefAnnoOrthogonalPosF  = -1.11 ;-0.16 ;0.46               ; move ref vector down
  rescsv@vcLineArrowColor         = "azure3" ;"grey40"
  rescsv@vcLineArrowThicknessF    = 2.
  rescsv@vcMapDirection           = False
@@ -828,7 +848,7 @@ begin
    dumvector                       = gsn_csm_vector(wks, ux_plane_c,uz_plane_c,rescsv)
    overlay(plot(1),dumvector)
  else
-   rescsv@vcRefAnnoString2         = "U"
+   rescsv@vcRefAnnoString2         = "m/s"
    dumvector                       = gsn_csm_vector(wks, ux_plane,uz_plane,rescsv)
    overlay(plot(1),dumvector)
  end if
