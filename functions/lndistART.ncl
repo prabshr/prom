@@ -18,6 +18,8 @@ undef("lndistART")
 ; M_k = N*(Dpd_i)^k [exp((k^2)/2 * (log(sig_i))^2.]
 ;Ackerman et al. (1998), Whitby 1978;
 
+;nbdl for favg, boundary cropped
+
 function lndistART(fil_cos,opt)
 
 begin
@@ -25,6 +27,8 @@ begin
   favg  = opt@favg   
   iy    = opt@iy
   ix    = opt@ix
+  oup   = opt@fout
+  nbdl  = opt@nbdl
 
   if (smode.lt.1 .or. smode.gt.12) then
     print("Mode should be between 1..12")
@@ -198,16 +202,27 @@ begin
   Dpd_i=Dpd_i>1.E-9
   print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i)/1.E6 + "cm-3 Mi " + avg(M_i))
 
+
+  if (oup.eq.0) then     ;Output ASD
+
   ;Compute lognormal aerosol size distribution
-  x1     = ispan(1,9,1)*1.0        ;nm
-  x2     = ispan(10,95,5)*1.0     ;nm
-  x3     = ispan(105,1000,50)*1.0  ;nm
-  x4     = ispan(1010,10000,100)*1.0 ;nm
-  xx     = array_append_record (x1, x2, 0) 
-  xx2    = array_append_record (xx, x3, 0)
-  Dp     = array_append_record (xx2, x4, 0)
- 
-  nDp    = dimsizes(Dp)
+  ;First create size bins with constant dlnDp
+  nchan = 1./32.
+
+  p1 = 1.    ;nm
+  nDp  = 300
+  lp   = new(nDp,"float")
+
+  do ix = 0,nDp-1
+    if (ix.eq.0) then
+       lp(ix) = log(p1)
+    else
+       lp(ix) = lp(ix-1) + nchan
+    end if
+  end do
+  Dp = exp(lp)
+  ;---------------------------------------------------
+
   rnlDp   = new((/2,nDp,nz/),"float")
   rnlDp!1 = "Dp"
   rnlDp!2 = "Z"
@@ -216,6 +231,7 @@ begin
   rnlDp@mode      = smode
   rnlDp@mname     = mname(imode)
   rnlDp@time      = date_str
+  rnlDp@dlnDp     = nchan
 
   if (favg) then
     Ncm3   = N_i(0,:,:,:)/1.E6    ;cm3
@@ -243,15 +259,32 @@ begin
     do ib = 0, nDp-1
     print("Averaging for mode :" + ib)
     do iz = 0, nz-1
-       rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,:,:))) 
-       rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,:,:))) 
+       rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-1))) 
+       rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-1))) 
     end do
     end do
   end if
  
   ;Reverse COSMO vertical levels
   rnlDp = rnlDp(:,:,::-1)
-
   return(rnlDp)
 
+  else if (oup.eq.1) then
+    ndim   = dimsizes(N_i(0,:,:,:))
+    Ncm3   = N_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)/1.E6    ;cm3
+    return(Ncm3)   ;cm3
+  else if (oup.eq.2) then
+    ndim   = dimsizes(M_i(0,:,:,:))
+    Mkg    = M_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1000.   ;m3/m3
+    return(Mkg)
+  else if (oup.eq.3) then
+    ndim   = dimsizes(Dpd_i(0,:,:,:))
+    Dpd    = Dpd_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1.E9  ;nm
+    return(Dpd)    ;nm
+  else
+    print("Error ... check opt@fout=0-3")
+  end if
+  end if
+  end if
+  end if
 end

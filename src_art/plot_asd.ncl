@@ -1,7 +1,6 @@
 ;Plot aerosol size distribution for select modes
 ;opt@favg = True, returns spatial mean and standard deviation of each mode
 ; Data are ouput at specified heights in 4 different subplots
-
 load "$prom_root/functions/lndistART.ncl"
 
 begin
@@ -10,12 +9,17 @@ begin
   exps = (/"runART_6a_HET","runART_6b_HET","runART_6b_HET"/)
 
   heights     = (/10., 1000., 2000., 4000., 7000./)
+  ;heights     = (/2000.,4000./) ;
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
-  nf       = 18    ;midnight
-  sid      = 0     ;used INT2lM-MOZART with ldust = True
+  nf       = 18+15    ;midnight + 15 hrs
+  sid      = 1     ;used INT2lM-MOZART with ldust = True
   ;;
   diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/" + exps(sid) + "/cosout/"
+  diri = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
+
+  ;diri = "/p/largedata/hbn33/shrestha1/runART_6_HET/" + "/cosout/" 
+  ;nf = 10 
   fils_cos = systemfunc("ls " + diri + "*.nc")
   fil_cos  = fils_cos(nf)
 
@@ -28,6 +32,9 @@ begin
   opt@iy = 90
   opt@ix = 150
   opt@favg = True
+  opt@fout = 0   ;Output ASD
+  opt@nbdl = 20  ; Crop
+
   smodes = ispan(1,12,1) 
 
   do im = 0, dimsizes(smodes)-1
@@ -41,6 +48,7 @@ begin
   end do
   Dp   = nlDp&Dp
   Z    = nlDp&Z
+  nchan = nlDp@dlnDp
 
   ;Extract average or location value of dN/dlog(Dp)p
   nid = 0
@@ -69,16 +77,18 @@ begin
   znlDp3       = transpose(nlDp3(:,izlevs))
   znlDp4       = transpose(nlDp4(:,izlevs))
   ;
-  zsnlDp1       = transpose(snlDp1(:,izlevs))
-  zsnlDp2       = transpose(snlDp2(:,izlevs))
-  zsnlDp3       = transpose(snlDp3(:,izlevs))
-  zsnlDp4       = transpose(snlDp4(:,izlevs))
+  if (opt@favg) then
+    zsnlDp1       = transpose(snlDp1(:,izlevs))
+    zsnlDp2       = transpose(snlDp2(:,izlevs))
+    zsnlDp3       = transpose(snlDp3(:,izlevs))
+    zsnlDp4       = transpose(snlDp4(:,izlevs))
+  end if
 
 ; Diagnostics Print
-  N_cn1 = ceil(dim_sum_n(znlDp1,1))
-  N_cn2 = ceil(dim_sum_n(znlDp2,1))
-  N_cn3 = ceil(dim_sum_n(znlDp3,1))
-  N_cn4 = ceil(dim_sum_n(znlDp4,1))
+  N_cn1 = ceil(dim_sum_n(znlDp1,1)) *nchan
+  N_cn2 = ceil(dim_sum_n(znlDp2,1)) *nchan
+  N_cn3 = ceil(dim_sum_n(znlDp3,1)) *nchan
+  N_cn4 = ceil(dim_sum_n(znlDp4,1)) *nchan
 
   legend1 = heights + " m : N_x = " + N_cn1 + " cm-3"
   legend2 = heights + " m : N_x = " + N_cn2 + " cm-3"
@@ -94,7 +104,7 @@ begin
   plot = new(4,"graphic")
 
   wks_type = "png"
-  fname_out = "Figure_ASD" ;+ sprinti("%0.2i",iz)
+  fname_out = "Figure_ASD_" + nf + "_" + opt@nbdl ;+ sprinti("%0.2i",iz)
   wks = gsn_open_wks(wks_type,fname_out)
 
   fncps_no = ":F21:"
