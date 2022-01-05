@@ -8,12 +8,18 @@ function pm25ART(fil_cos,opt)
 begin
   iy    = opt@iy
   ix    = opt@ix
+  favg  = opt@favg
+  fdry  = opt@fdry
 
   nc_cos   = addfile(fil_cos,"r")
 
 ; Do not touch below
 ;---------------------------------------------------------------------------------
-  print("Processing " + fil_cos + " at " + iy + " " + ix)
+  if (favg) then
+    print("Processing " + fil_cos + " domain average")
+  else
+    print("Processing " + fil_cos + " at " + iy + " " + ix)
+  end if
 
   ;Read vertical co-ordinate
   hhl = nc_cos->vcoord
@@ -44,7 +50,11 @@ begin
   pm25_seas  = (nc_cos->VSEASA) + 0.5*(nc_cos->VSEASB)
 
   ;Number of classified pm25 species
-   nc = 3*1 + 7 
+   if (fdry) then
+     nc = 3*1 + 6
+   else
+     nc = 3*1 + 7
+   end if
 
    pm25     = new((/nc,nz/),"float")
    pm25!0   = "ic"
@@ -53,21 +63,43 @@ begin
    pm25&Z   = mhgt
    pm25@units    = pm25_crust@units
    pm25@long_name     = "PM2.5"
-   pm25@colors   = (/"goldenrod1", "darkseagreen", "palevioletred1", "grey29", "mistyrose", \
-                     "mediumorchid2","powderblue","royalblue4","sandybrown","skyblue4" /)
-   pm25@names    = (/"SO4", "NO3", "NH4", "EC", "POC", "INORG", "SOA","H2O", "CRUST", "SEAS"/)
+   if (fdry) then
+      pm25@colors   = (/"goldenrod1", "darkseagreen", "palevioletred1", "grey29", "mistyrose", \
+                     "mediumorchid2","powderblue","sandybrown","skyblue4"/)
+     pm25@names    = (/"SO4", "NO3", "NH4", "EC", "POC", "INORG", "SOA", "CRUST", "SEAS"/)
+   else
+      pm25@colors   = (/"goldenrod1", "darkseagreen", "palevioletred1", "grey29", "mistyrose", \
+                     "mediumorchid2","powderblue","sandybrown","skyblue4","royalblue4" /)
+     pm25@names    = (/"SO4", "NO3", "NH4", "EC", "POC", "INORG", "SOA", "CRUST", "SEAS","H2O"/)
+   end if
 
-
-   pm25(0,:) = (/pm25_so4(0,:,iy,ix)/)
-   pm25(1,:) = (/pm25_no3(0,:,iy,ix)/)
-   pm25(2,:) = (/pm25_nh4(0,:,iy,ix)/)
-   pm25(3,:) = (/pm25_ec(0,:,iy,ix)/)
-   pm25(4,:) = (/pm25_poc(0,:,iy,ix)/)
-   pm25(5,:) = (/pm25_inorg(0,:,iy,ix)/)
-   pm25(6,:) = (/pm25_soa(0,:,iy,ix)/)
-   pm25(7,:) = (/pm25_h2o(0,:,iy,ix)/)
-   pm25(8,:) = (/pm25_crust(0,:,iy,ix)/)
-   pm25(9,:) = (/pm25_seas(0,:,iy,ix)/)
+   if (favg) then
+     pm25(0,:) = dim_avg_n(dim_avg_n(pm25_so4(0,:,:,:),2),1)
+     pm25(1,:) = dim_avg_n(dim_avg_n(pm25_no3(0,:,:,:),2),1)
+     pm25(2,:) = dim_avg_n(dim_avg_n(pm25_nh4(0,:,:,:),2),1)
+     pm25(3,:) = dim_avg_n(dim_avg_n(pm25_ec(0,:,:,:),2),1)
+     pm25(4,:) = dim_avg_n(dim_avg_n(pm25_poc(0,:,:,:),2),1)
+     pm25(5,:) = dim_avg_n(dim_avg_n(pm25_inorg(0,:,:,:),2),1)
+     pm25(6,:) = dim_avg_n(dim_avg_n(pm25_soa(0,:,:,:),2),1)
+     if (.not.(fdry)) then
+     pm25(9,:) = dim_avg_n(dim_avg_n(pm25_h2o(0,:,:,:),2),1)
+     end if
+     pm25(7,:) = dim_avg_n(dim_avg_n(pm25_crust(0,:,:,:),2),1)
+     pm25(8,:) = dim_avg_n(dim_avg_n(pm25_seas(0,:,:,:),2),1)
+   else
+     pm25(0,:) = (/pm25_so4(0,:,iy,ix)/)
+     pm25(1,:) = (/pm25_no3(0,:,iy,ix)/)
+     pm25(2,:) = (/pm25_nh4(0,:,iy,ix)/)
+     pm25(3,:) = (/pm25_ec(0,:,iy,ix)/)
+     pm25(4,:) = (/pm25_poc(0,:,iy,ix)/)
+     pm25(5,:) = (/pm25_inorg(0,:,iy,ix)/)
+     pm25(6,:) = (/pm25_soa(0,:,iy,ix)/)
+     if (.not.(fdry)) then
+     pm25(9,:) = (/pm25_h2o(0,:,iy,ix)/)
+     end if
+     pm25(7,:) = (/pm25_crust(0,:,iy,ix)/)
+     pm25(8,:) = (/pm25_seas(0,:,iy,ix)/)
+   end if
 
    return(pm25(:,::-1))   
 end

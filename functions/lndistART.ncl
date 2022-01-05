@@ -18,12 +18,17 @@ undef("lndistART")
 ; M_k = N*(Dpd_i)^k [exp((k^2)/2 * (log(sig_i))^2.]
 ;Ackerman et al. (1998), Whitby 1978;
 
+;nbdl for favg, boundary cropped
+
 function lndistART(fil_cos,opt)
 
 begin
   smode = opt@smode
+  favg  = opt@favg   
   iy    = opt@iy
   ix    = opt@ix
+  oup   = opt@fout
+  nbdl  = opt@nbdl
 
   if (smode.lt.1 .or. smode.gt.12) then
     print("Mode should be between 1..12")
@@ -31,10 +36,32 @@ begin
   end if
 
   nc_cos   = addfile(fil_cos,"r")
+  time     = nc_cos->time
+
+  utc_date = cd_calendar(time, 0)
+ ;
+ ; Store return information into more meaningful variables.
+ ;
+   year   = tointeger(utc_date(:,0))    ; Convert to integer for
+   month  = tointeger(utc_date(:,1))    ; use sprinti 
+   day    = tointeger(utc_date(:,2))
+   hour   = tointeger(utc_date(:,3))
+   minute = tointeger(utc_date(:,4))
+   second = utc_date(:,5)
+ ;
+ ; Write out strings in the format "hhZ dd mmm yyyy".
+ ;
+
+   date_str =  sprinti("%0.4i", year) + "/" + sprinti("%0.2i", month) +"/"+sprinti("%0.2i", day) + \
+               "  " + sprinti("%0.2i", hour) + sprinti("%0.2i", minute) + " UTC"
 
 ;Do not touch below
 ;---------------------------------------------------------------------------------
-  print("Processing " + fil_cos + " at " + iy + " " + ix)
+  if (favg) then
+    print("Processing " + fil_cos + " for domain average")
+  else
+    print("Processing " + fil_cos + " at " + iy + " " + ix)
+  end if
 
   ;art_aerosol_const.f90 parameters
   ;nucl,acc,nucl-mixed,acc-mixed,soot,coarse,(small,medi,big) dust, 
@@ -173,38 +200,91 @@ begin
   Dpd_i@mname     = mname(imode)
  ;Cutoff
   Dpd_i=Dpd_i>1.E-9
-  print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i) + " Mi " + avg(M_i))
+  print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i)/1.E6 + "cm-3 Mi " + avg(M_i))
+
+
+  if (oup.eq.0) then     ;Output ASD
 
   ;Compute lognormal aerosol size distribution
-  x1     = ispan(1,9,1)*1.0        ;nm
-  x2     = ispan(10,95,5)*1.0     ;nm
-  x3     = ispan(105,1000,10)*1.0  ;nm
-  xx     = array_append_record (x1, x2, 0) 
-  Dp     = array_append_record (xx, x3, 0)
- 
-  nDp    = dimsizes(Dp)
-  nlDp   = new((/nDp,nz/),"float")
-  nlDp!0 = "Dp"
-  nlDp!1 = "Z"
-  nlDp&Dp = Dp
-  nlDp&Z  = mhgt
-  nlDp@mode      = smode
-  nlDp@mname     = mname(imode)
+  ;First create size bins with constant dlnDp
+  nchan = 1./32.
 
-  Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm3
-  Dpd    = Dpd_i(0,:,iy,ix)*1.E9  ;nm
+  p1 = 1.    ;nm
+  nDp  = 300
+  lp   = new(nDp,"float")
+
+  do ix = 0,nDp-1
+    if (ix.eq.0) then
+       lp(ix) = log(p1)
+    else
+       lp(ix) = lp(ix-1) + nchan
+    end if
+  end do
+  Dp = exp(lp)
+  ;---------------------------------------------------
+
+  rnlDp   = new((/2,nDp,nz/),"float")
+  rnlDp!1 = "Dp"
+  rnlDp!2 = "Z"
+  rnlDp&Dp = Dp
+  rnlDp&Z  = mhgt
+  rnlDp@mode      = smode
+  rnlDp@mname     = mname(imode)
+  rnlDp@time      = date_str
+  rnlDp@dlnDp     = nchan
+
+  if (favg) then
+    Ncm3   = N_i(0,:,:,:)/1.E6    ;cm3
+    Dpd    = Dpd_i(0,:,:,:)*1.E9  ;nm
+    ndim   = dimsizes(Dpd)
+    nlDp3d   = new((/nDp,nz,ndim(1),ndim(2)/),"float")
+  else
+    Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm3
+    Dpd    = Dpd_i(0,:,iy,ix)*1.E9  ;nm
+  end if
 
   temp1  = Ncm3/(sqrt(2.*PI)*log(sig_i))
   temp3  = 2.*(log(sig_i))^2.0 
 
   do ib = 0, nDp-1
     temp2  = -1.*(log(Dp(ib)/Dpd))^2.
-    nlDp(ib,:)  = temp1*exp(temp2/temp3) ; cm-3
+    if (favg) then
+      nlDp3d(ib,:,:,:)  = temp1*exp(temp2/temp3) ; cm-3
+    else
+      rnlDp(0,ib,:)  = temp1*exp(temp2/temp3) ; cm-3
+    end if
   end do
+
+  if (favg) then
+    do ib = 0, nDp-1
+    print("Averaging for mode :" + ib)
+    do iz = 0, nz-1
+       rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-1))) 
+       rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-1))) 
+    end do
+    end do
+  end if
  
   ;Reverse COSMO vertical levels
-  nlDp = nlDp(:,::-1)
+  rnlDp = rnlDp(:,:,::-1)
+  return(rnlDp)
 
-  return(nlDp)
-
+  else if (oup.eq.1) then
+    ndim   = dimsizes(N_i(0,:,:,:))
+    Ncm3   = N_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)/1.E6    ;cm3
+    return(Ncm3)   ;cm3
+  else if (oup.eq.2) then
+    ndim   = dimsizes(M_i(0,:,:,:))
+    Mkg    = M_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1000.   ;m3/m3
+    return(Mkg)
+  else if (oup.eq.3) then
+    ndim   = dimsizes(Dpd_i(0,:,:,:))
+    Dpd    = Dpd_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1.E9  ;nm
+    return(Dpd)    ;nm
+  else
+    print("Error ... check opt@fout=0-3")
+  end if
+  end if
+  end if
+  end if
 end

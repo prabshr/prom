@@ -35,6 +35,9 @@ begin
  diri_cos    = diri + "/" + case + "/" + event + case + "/cosout/"
  diri_cosI   = diri + "/" + case + "/" + event + case + "/cosout/ivr/"
 
+ diri_cos = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/"
+ diri_cosI = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/ivr/"
+
  inset       = False
  
  ;Bonn Radar
@@ -125,7 +128,7 @@ begin
  fncps_no = 21
  fncps_hgt = 0.028
 
- wks_type                 = "png"
+ wks_type                 = "x11"
  wks = gsn_open_wks(wks_type,fname_out)
  gsn_define_colormap(wks,"precip2_17lev")
 

@@ -109,9 +109,14 @@ begin
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
+ diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
 
  dataFillVal    = -999        ;Polarimetric flags
 
+ diri_cos = "/p/scratch/terrsysmp-art/runART_6_HET/cosout/"
+ diri_cosI = "/p/scratch/terrsysmp-art/runART_6_HET/cosout/ivr/"
+ diri_dBz  = "/p/home/jusers/shrestha1/juwels/emvorado-offline/run_juwels/BoxPol-volscan.runE_6_HET2483_bonnRadar_20150705/runE_6_HET2483/"
+ diri_emvo = diri_dBz 
 ;-----------------------------------------------------------------------------------------
 ;#2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
@@ -267,8 +272,6 @@ begin
 
  else
 
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
-
  ;Read EMVORADO outputs ------------------------------------------------------------
  nh           = dimsizes(polarimetric)
  varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
@@ -276,6 +279,7 @@ begin
  opt      = True
  opt@profile = -1   ;return 3d data
  opt@nf      =  fn
+
 
  opt@var  = "zh"
  Zh = read_emvorado_pol(diri_emvo,opt)
@@ -299,6 +303,19 @@ begin
  varh(2,:,:,:) = where(Zh.lt.-5., varh@_FillValue, KDP)
  varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
  delete([/Zh, Zv, KDP, RHV/])
+
+; Remapping BPRO Data with model grid
+ if (readBPRO) then
+   nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
+   sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
+   eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
+   ;change of reference from model to radar domain
+   jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
+
+   print("Check if the radar corners are correctly extracted ...")
+   print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
+   print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
+ end if
 
 ;-------------------------------------------------------------------------------
 ;#7 Crop data and vertical plane for interpolation
@@ -334,16 +351,6 @@ begin
 
 
   if (readBPRO) then
-    nm      = getind_latlon2d (lat,lon, glat_idB(0), glon_idB(0))
-    sclp    = tointeger((/nm(0,0) - ext_pfo, nm(0,1) - ext_pfo/))
-    eclp    = tointeger((/nm(0,0) + ext_pfo, nm(0,1) + ext_pfo/))
-    ;change of reference from model to radar domain
-    jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
-
-    print("Check if the radar corners are correctly extracted ...")
-    print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
-    print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
-    ; Add offset 
     jiv   = (/ji(0)-jinv(0),ji(1)-jinv(0),ji(2)-jinv(2),ji(3)-jinv(2)/) + 1
   else
     jiv   = ji
@@ -361,7 +368,6 @@ begin
 
   print("Crop indices ...")
   print(" " + ji)
-
  
   lat_c    = lat(ji(0):ji(1),ji(2):ji(3))
   lon_c    = lon(ji(0):ji(1),ji(2):ji(3))
@@ -370,14 +376,13 @@ begin
   print("Y " + min(lat_c) + " " + max(lat_c))
   zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
   tmp_dim = dimsizes(lon_c)
-
-  ; Obtain the radar line of view
   Ipangle = Ipangles(prom-1)
   ;;;CPS 
   ;glat_id = glat_id + 0.01*offs
+
+  ; Obtain the radar line of view
+  Ipangle = Ipangles(prom-1)
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
-;;CPS
-  plane(1) = plane(1) + offs
 
   glon_p = plane@X
   glat_p = plane@Y
@@ -819,8 +824,8 @@ begin
 
  rescs@trYMaxF                    = hloc ;80
  ;CPS for SPP proposal
- rescs@trXMaxF = glat_id + 0.4 ;0.3 ;30. ;xlon(1) ;51.1
- rescs@trXMinF = glat_id - 0.1 ;10. ;xlon(0) ;50.7
+ rescs@trXMaxF = xlon(1) ;51.1
+ rescs@trXMinF = xlon(0) ;50.7
 
  ;
  loc_label                        = ispan(11,99,10)
