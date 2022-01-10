@@ -46,10 +46,11 @@ begin
    fne     = 0 ;48
  else if (prom.eq.4) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns     = 16 
-   fne     = 16 
+   diri    = "/p/scratch/terrsysmp-art/"
+   fns     = 1
+   fne     =  36 
    xlon = (/50.7, 51.1/)
-   ;offs    = 0
+   offs    = 0
  end if
  end if
  end if
@@ -64,7 +65,7 @@ begin
  glat_idB    = 50.73052 ;
  extB        = 0.91     ;extent in degrees
 
- Ipangles    = (/0.,0.,0.,27./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
+ Ipangles    = (/0.,0.,0.,85./) ;(/25.0,145.,170./)   ;consistent with plot_ppi
  qprom       = (/4.0, 3.0, 3.0,3.0/)    ;max for vertical profile
 
  hloc        = 70 ;70      ;max 99, height of cross-section for plotting
@@ -305,7 +306,7 @@ begin
   tmp_dim = dimsizes(lon_c)
 
   ; Obtain the radar line of view
-  Ipangle = Ipangles(prom-1)
+  ;Ipangle = Ipangles(prom-1)
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
   ;;CPS
   plane(1) = plane(1) + offs

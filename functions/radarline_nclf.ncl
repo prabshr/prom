@@ -1,6 +1,13 @@
 function radarline_nclf(Ipangle,lat_c,lon_c,glat_idB,glon_idB,extB,iopt)
+
+;iopt = False
+;Obtains the second co-ordintate and index passing throuhg a c-s at specified angle
+;iopt = True
+;Obtains two co-ordintates and indexes passing throuhg a c-s at specified angle
 begin
   ;Line of Radar View and point on the Box
+  print("radarline_nclf inputs "+ " " + Ipangle + " degree " + glat_idB + " N " + glon_idB + " E")
+
   pi     = 4.0*atan(1.0)
   if (Ipangle.le.90.) then
     Sangle = 90. - Ipangle
@@ -10,7 +17,7 @@ begin
   mslp   = tan(pi*(Sangle)/180.)
   cosf   = abs(cos(pi*glat_idB/180.))
   cinc   = glat_idB - mslp*glon_idB*cosf
-  print("Radar line " + cinc + " " + mslp)
+  ;;print("Radar line " + cinc + " " + mslp)
 
   ndim   = dimsizes(lon_c)
 
@@ -37,9 +44,12 @@ begin
       end if
       bpx2 = (bpy2 - cinc)/mslp/cosf
     end if
-    nm1      = getind_latlon2d (lat_c,lon_c, bpy1, bpx1)
+    nm1     = getind_latlon2d (lat_c,lon_c, bpy1, bpx1)
     nm2     = getind_latlon2d (lat_c,lon_c, bpy2, bpx2)
     plane   = (/nm1(0,1),nm2(0,1),nm1(0,0),nm2(0,0)/)*1.0 + 1.
+   
+    plane   = (/nm1(0,1),nm1(0,0),nm2(0,1),nm2(0,0)/)*1.0  ;NCL Version 6.6.2
+
     if (Ipangle.le.180) then
       glon_p  = glon_idB + extB* abs(cos(pi*(90.-Ipangle)/180.))
     else

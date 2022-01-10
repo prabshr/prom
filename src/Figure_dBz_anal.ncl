@@ -39,21 +39,20 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- prom=1
+ prom=4   
  pname="PROM1";
  inst=6
  readBPRO = False ;True    ;
  lnd = "HET"
- itype = "2593"
+ itype = "ART"
  itype_gscp  = lnd + itype
 
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns      = 0 ;26 ;21 ; 16 ; 21 ;10
+   fns      = 16 ;26 ;21 ; 16 ; 21 ;10
    fne      = 20 ;21 
    dns      = 0  ; offset for dbz files
    xlon = (/50.7, 51.1/)
-   ;offs = -6 ;-4
  else if (prom.eq.2) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
    fns      = 48 ;19
@@ -66,20 +65,20 @@ begin
    dns     = 0 ;12 ; offset for dbz files
  else if (prom.eq.4) then
    diri    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   fns     = 16 ;40 ;12
-   fne     = 16; 48
+   diri    = "/p/scratch/terrsysmp-art/"
+   fns     = 1 ;40 ;12
+   fne     = 36; 48
    dns     = 0 ;12 ; offset for dbz files
-   ;offs    = 0
  end if
  end if
  end if
  end if
 
  ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
- Ipangles    = (/38.,0.,0.,27./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
+ Ipangles    = (/38.,0.,0.,80./) ;(/340.0,145.,170./)   ;consistent with plot_ppi
  ngridmax    = 90*3  ;110 ;90
  ext_pfo     = 90  ;controls extent of c-s
- iopt        = True ;False    ;always True for accurate WRF interpolatoin
+ iopt        = True ;False (point X and angle)  ;always True (points A to B) for accurate WRF interpolatoin
  fstrack     = True ;False
 
  glon_idB    = (/7.071663, 7.489/) ; Bonn Radar
@@ -113,10 +112,9 @@ begin
 
  dataFillVal    = -999        ;Polarimetric flags
 
- diri_cos = "/p/scratch/terrsysmp-art/runART_6_HET/cosout/"
- diri_cosI = "/p/scratch/terrsysmp-art/runART_6_HET/cosout/ivr/"
  diri_dBz  = "/p/home/jusers/shrestha1/juwels/emvorado-offline/run_juwels/BoxPol-volscan.runE_6_HET2483_bonnRadar_20150705/runE_6_HET2483/"
  diri_emvo = diri_dBz 
+
 ;-----------------------------------------------------------------------------------------
 ;#2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
@@ -140,10 +138,10 @@ begin
  zmodel    = 0.5*(hhl(0:nz-1,:,:) + hhl(1:nz,:,:))/1000.  ;km
 ;
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
- nfils   = dimsizes(fils_cos)
- ;nfils    = fne - fns + 1
+ ;nfils   = dimsizes(fils_cos)
+ nfils    = fne - fns + 1
 
- do fn  = fns,fne ;fns, fne ;nfils -1      ;BIG LOOP
+ do fn  = fns,fne                ;BIG LOOP
 
  print(fils_cos(fn))
  nc_cos = addfile(fils_cos(fn),"r")
@@ -213,6 +211,7 @@ begin
    glat_id = glat_idB(0)
    glon_id = glon_idB(0)
  end if
+
 ;-----------------------------------------------------------------------------------------
 ;#6 DERIVE POLARIMETRIC VARIABLES
 ;-------------------------------------------------------------------------------------
@@ -229,73 +228,73 @@ begin
 
 ;;;;;;;;;;
  if (readBPRO) then
+   print("Using B-PRO....")
+   diri_input   = diri_dBz + "/input"
+   diri_output  = diri_dBz + "/output"
 
- diri_input   = diri_dBz + "/input"
- diri_output  = diri_dBz + "/output"
+   fils_var     = systemfunc("ls " + diri_output + "/dbz-tm-1m_*")
+   fils_elv     = systemfunc("ls " + diri_input + "/elevation_*")
+   fil_lat      = systemfunc("ls " + diri_input + "/lat_*")
+   fil_lon      = systemfunc("ls " + diri_input + "/lon_*")
 
- fils_var     = systemfunc("ls " + diri_output + "/dbz-tm-1m_*")
- fils_elv     = systemfunc("ls " + diri_input + "/elevation_*")
- fil_lat      = systemfunc("ls " + diri_input + "/lat_*")
- fil_lon      = systemfunc("ls " + diri_input + "/lon_*")
+   ;Read header information to extract nx,ny,nz
+   array = new(3,integer)
+   EXT1::readdim(array(0),array(1),array(2),fils_elv(fn-dns))
 
- ;Read header information to extract nx,ny,nz
- array = new(3,integer)
- EXT1::readdim(array(0),array(1),array(2),fils_elv(fn-dns))
-
- latPV = new((/1,1,array(1),array(0)/),"float")
- lonPV = new((/1,1,array(1),array(0)/),"float")
- hgtPV = new((/1,array(2),array(1),array(0)/),"float")
- EXT2::readascii(array(0),array(1),1,latPV,1,1,fil_lat)
- EXT2::readascii(array(0),array(1),1,lonPV,1,1,fil_lon)
- EXT2::readascii(array(0),array(1),array(2),hgtPV,1,1,fils_elv(fn-dns))
+   latPV = new((/1,1,array(1),array(0)/),"float")
+   lonPV = new((/1,1,array(1),array(0)/),"float")
+   hgtPV = new((/1,array(2),array(1),array(0)/),"float")
+   EXT2::readascii(array(0),array(1),1,latPV,1,1,fil_lat)
+   EXT2::readascii(array(0),array(1),1,lonPV,1,1,fil_lon)
+   EXT2::readascii(array(0),array(1),array(2),hgtPV,1,1,fils_elv(fn-dns))
  
 
- nh           = dimsizes(polarimetric)
- varh         = new((/nh,array(2),array(1),array(0)/),"float")    ;Initialize variable for plotting
- varh@_FillValue = -99
- varPV        = new((/8,array(2),array(1),array(0)/),"float")
- varPV@_FillValue = -99
- fname        = fils_var(fn-dns) 
- print(" " + fname)
- ;print("WARNING >>>>")
+   nh           = dimsizes(polarimetric)
+   varh         = new((/nh,array(2),array(1),array(0)/),"float")    ;Initialize variable for plotting
+   varh@_FillValue = -99
+   varPV        = new((/8,array(2),array(1),array(0)/),"float")
+   varPV@_FillValue = -99
+   fname        = fils_var(fn-dns) 
+   print(" " + fname)
+   ;print("WARNING >>>>")
 
- EXT2::readascii(array(0),array(1),array(2),varPV,8,1,fname)
- varh(0,:,:,:) = varPV(1,::-1,:,:)
- varh(1,:,:,:) = varPV(2,::-1,:,:)
- varh(2,:,:,:) = varPV(3,::-1,:,:)
- varh(3,:,:,:) = varPV(4,::-1,:,:)
+   EXT2::readascii(array(0),array(1),array(2),varPV,8,1,fname)
+   varh(0,:,:,:) = varPV(1,::-1,:,:)
+   varh(1,:,:,:) = varPV(2,::-1,:,:)
+   varh(2,:,:,:) = varPV(3,::-1,:,:)
+   varh(3,:,:,:) = varPV(4,::-1,:,:)
 
- Zh  = varh(0,:,:,:)
- Zv  = varh(1,:,:,:)
- KDP = varh(2,:,:,:)
- RHV = varh(3,:,:,:)
+   Zh  = varh(0,:,:,:)
+   Zv  = varh(1,:,:,:)
+   KDP = varh(2,:,:,:)
+   RHV = varh(3,:,:,:)
 
  else
-
+   print("Using EMVORADO ...")
  ;Read EMVORADO outputs ------------------------------------------------------------
- nh           = dimsizes(polarimetric)
- varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
- varh@_FillValue = -999.99
- opt      = True
- opt@profile = -1   ;return 3d data
- opt@nf      =  fn
+   nh           = dimsizes(polarimetric)
+   varh         = new((/nh,nz,ny,nx/),"float")    ;Initialize variable for plotting
+   varh@_FillValue = -999.99
+   opt      = True
+   opt@profile = -1   ;return 3d data
+   opt@nf      =  fn
 
 
- opt@var  = "zh"
- Zh = read_emvorado_pol(diri_emvo,opt)
- opt@var  = "zv"
- Zv = read_emvorado_pol(diri_emvo,opt)
- opt@var  = "kdp"
- KDP = read_emvorado_pol(diri_emvo,opt)
- opt@var  = "rrhv"
- rRHV = read_emvorado_pol(diri_emvo,opt)
- opt@var  = "irhv"
- iRHV = read_emvorado_pol(diri_emvo,opt)
+   opt@var  = "zh"
+   Zh = read_emvorado_pol(diri_emvo,opt)
+   opt@var  = "zv"
+   Zv = read_emvorado_pol(diri_emvo,opt)
+   opt@var  = "kdp"
+   KDP = read_emvorado_pol(diri_emvo,opt)
+   opt@var  = "rrhv"
+   rRHV = read_emvorado_pol(diri_emvo,opt)
+   opt@var  = "irhv"
+   iRHV = read_emvorado_pol(diri_emvo,opt)
 
- RHV = ((rRHV^2+iRHV^2)^0.5) / ((Zh*Zv)^0.5)   ;[-]
- KDP = KDP*1000.                               ;[deg/km]
- Zh  = 10*log10(Zh/1.)                         ;[dBZ]
- Zv  = 10*log10(Zv/1.)                         ;[dBZ]
+   RHV = ((rRHV^2+iRHV^2)^0.5) / ((Zh*Zv)^0.5)   ;[-]
+   KDP = KDP*1000.                               ;[deg/km]
+   Zh  = 10*log10(Zh/1.)                         ;[dBZ]
+   Zv  = 10*log10(Zv/1.)                         ;[dBZ]
  end if
 
  varh(0,:,:,:) = where(Zh.lt.-10., varh@_FillValue, Zh)
@@ -312,7 +311,7 @@ begin
    ;change of reference from model to radar domain
    jinv    = (/sclp(0),eclp(0)-1,sclp(1),eclp(1)-1/)
 
-   print("Check if the radar corners are correctly extracted ...")
+   print("B-PRO: Check if the radar corners are correctly extracted ...")
    print(lat(jinv(0),jinv(2)) + " " +  latPV(0,0,0,0))
    print(lon(jinv(0),jinv(2)) + " " +  lonPV(0,0,0,0))
  end if
@@ -356,16 +355,6 @@ begin
     jiv   = ji
   end if
 
-  if (prom.eq.4 .and. fns.eq.16) then
-   print("Hardwire setting")
-  ;ART PROM setting
-  glat_id = 50.8799
-  glon_id = 7.14264 +0.09
-  mpcorner = (/50.6999,6.90264,51.5099,7.98264/)
-  jiv = (/145,226,144,212/)
-  ji  = jiv
-  end if
-
   print("Crop indices ...")
   print(" " + ji)
  
@@ -376,12 +365,9 @@ begin
   print("Y " + min(lat_c) + " " + max(lat_c))
   zmodelc = zmodel(:,ji(0):ji(1),ji(2):ji(3))
   tmp_dim = dimsizes(lon_c)
-  Ipangle = Ipangles(prom-1)
-  ;;;CPS 
-  ;glat_id = glat_id + 0.01*offs
 
   ; Obtain the radar line of view
-  Ipangle = Ipangles(prom-1)
+  ;Ipangle = Ipangles(prom-1)
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
 
   glon_p = plane@X
@@ -391,6 +377,10 @@ begin
   lon_plane  = wrf_user_intrp2d(lon_c,plane,Ipangle,iopt)
   lat_plane  = wrf_user_intrp2d(lat_c,plane,Ipangle,iopt)
   hgt_plane  = wrf_user_intrp3d(zmodelc,zmodelc,"v",plane,Ipangle,iopt)
+
+  print(plane)
+  print(glat_id + " " + glon_id)
+  print(glat_p + "  " + glon_p)
 
 ;
 ;crop
@@ -593,7 +583,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -824,8 +814,8 @@ begin
 
  rescs@trYMaxF                    = hloc ;80
  ;CPS for SPP proposal
- rescs@trXMaxF = xlon(1) ;51.1
- rescs@trXMinF = xlon(0) ;50.7
+ ;rescs@trXMaxF = xlon(1) ;51.1
+ ;rescs@trXMinF = xlon(0) ;50.7
 
  ;
  loc_label                        = ispan(11,99,10)

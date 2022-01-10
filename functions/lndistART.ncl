@@ -234,12 +234,12 @@ begin
   rnlDp@dlnDp     = nchan
 
   if (favg) then
-    Ncm3   = N_i(0,:,:,:)/1.E6    ;cm3
+    Ncm3   = N_i(0,:,:,:)/1.E6    ;cm-3
     Dpd    = Dpd_i(0,:,:,:)*1.E9  ;nm
     ndim   = dimsizes(Dpd)
     nlDp3d   = new((/nDp,nz,ndim(1),ndim(2)/),"float")
   else
-    Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm3
+    Ncm3   = N_i(0,:,iy,ix)/1.E6    ;cm-3
     Dpd    = Dpd_i(0,:,iy,ix)*1.E9  ;nm
   end if
 
@@ -271,8 +271,8 @@ begin
 
   else if (oup.eq.1) then
     ndim   = dimsizes(N_i(0,:,:,:))
-    Ncm3   = N_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)/1.E6    ;cm3
-    return(Ncm3)   ;cm3
+    Ncm3   = N_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)/1.E6    ;cm-3
+    return(Ncm3)   ;cm-3
   else if (oup.eq.2) then
     ndim   = dimsizes(M_i(0,:,:,:))
     Mkg    = M_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1000.   ;m3/m3
