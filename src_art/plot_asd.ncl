@@ -4,25 +4,30 @@
 load "$prom_root/functions/lndistART.ncl"
 
 begin
-;User Settings
-;--------------------------------------------------------------------------------
-  exps = (/"runART_6a_HET","runART_6b_HET","runART_6b_HET"/)
+;-----------------------------------------------------------------------------------------
+;#1 USER SETTINGS
+;-----------------------------------------------------------------------------------------
+  pname = "PROM1";
+  inst  = 6
+  lnd   = "HET"
+  itype = "ART"
+  diri  = "/p/largedata/hbn33/shrestha1/"
 
   heights     = (/10., 1000., 2000., 4000., 7000./)
   ;heights     = (/2000.,4000./) ;
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
-  nf       = 18+15    ;midnight + 15 hrs
-  sid      = 1     ;used INT2lM-MOZART with ldust = True
-  ;;
-  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/" + exps(sid) + "/cosout/"
-  diri = "/p/scratch/terrsysmp-art/runART_6_HET2483/cosmo_out/"
 
-  ;diri = "/p/largedata/hbn33/shrestha1/runART_6_HET/" + "/cosout/" 
-  ;nf = 10 
-  fils_cos = systemfunc("ls " + diri + "*.nc")
+;--------------------------------------------------------------------------------
+  itype_gscp  = lnd + itype
+  sfold       = "runART_" + inst + "_" + itype_gscp
+  expname     = itype_gscp + "_" + pname
+  subevent    = expname + "/" + sfold
+  diri_cos    = diri + "/" + subevent + "/cosout/"
+  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+
+  fils_cos = systemfunc("ls " + diri_cos + "*.nc")
   fil_cos  = fils_cos(nf)
-
 ;--------------------------------------------------------------------------------
   ;Geomeric standard deviations of lognormal modes
   sig = (/1.7, 2.0, 1.7, 2.0, 1.4, 2.5, 1.7, 1.6, 1.5, 1.9, 2.0, 1.7/)
@@ -36,6 +41,10 @@ begin
   opt@nbdl = 20  ; Crop
 
   smodes = ispan(1,12,1) 
+
+;-----------------------------------------------------------------------------------------
+;#2 Extract lognormal ASD for each mode 
+;-----------------------------------------------------------------------------------------
 
   do im = 0, dimsizes(smodes)-1
     opt@smode = smodes(im)
@@ -98,7 +107,7 @@ begin
 ;  print(N_cn1 + " " + N_cn2 + " " + N_cn3 + " " + N_cn4) 
 
 ;-----------------------------------------------------------------------------------------
-; Plotting Resource
+;#3 Plotting Resource
 ;-----------------------------------------------------------------------------------------
 
   plot = new(4,"graphic")
