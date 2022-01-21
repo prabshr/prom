@@ -1,34 +1,62 @@
-;Plot chemical composition of PM2.5
+;Plot chemical composition of PM2.5 for specified lat/long at different heights
 ;Parameters nf - file number
 ;Only species with percentage > thr_perc is used for plotting
-;Pie charts are generated to zxy location
 load "$prom_root/functions/pm25ART.ncl"
 
 begin
-;User Settings
-;--------------------------------------------------------------------------------
-;User Settings
-;--------------------------------------------------------------------------------
-  exps = (/"runART_6a_HET","runART_6b_HET","runART_6b_HET"/)
+;-----------------------------------------------------------------------------------------
+;#1 USER SETTINGS
+;-----------------------------------------------------------------------------------------
+  pname = "KNPROM1";
+  inst  = 6
+  lnd   = "HET"
+  itype = "ART"
+  diri  = "/p/largedata/hbn33/shrestha1/"
 
-  heights     = (/10., 2000., 4000., 7000./)
-  nf       = 18+15    ;midnighti + 15
+  heights     = (/2000./) ;(/10., 2000., 4000., 7000./)
+  nf       = 32 ;18+15    ;midnighti + 15
   sid      = 0     ;used INT2lM-MOZART with ldust = True
   ;;
-  diri = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/" + exps(sid) + "/cosout/"
-  fils_cos = systemfunc("ls " + diri + "*.nc")
-  fil_cos  = fils_cos(nf)
+  thr_perc = 0.2   ;Threshold percentage to plot
+  glon_idB = 7.071663 ; Bonn Radar
+  glat_idB = 50.73052
+  nbdl     = 0
 
-  thr_perc = 0.1   ;Threshold percentage to plot
-  zyx      = (/20, 150, 150/)   ;Model co-ordinate (Z,Y,X) 
+;--------------------------------------------------------------------------------
+  itype_gscp  = lnd + itype
+  sfold       = "runART_" + inst + "_" + itype_gscp
+  expname     = itype_gscp + "_" + pname
+  subevent    = expname + "/" + sfold
+  diri_cos    = diri + "/" + subevent + "/cosout/"
+  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+
+;;--------------------------------------------------------------------------------
+  ;Identify geo-location
+  nc_cosI = addfile(diri_cosI + "/lfff00000000c.nc","r")
+  lat     = nc_cosI->lat
+  lon     = nc_cosI->lon
+
+  nm      = getind_latlon2d (lat,lon, glat_idB, glon_idB)
+  yloc    = nm(0,0)
+  xloc    = nm(0,1)
+
+  print("Bonn Radar location " + yloc + " " + xloc)
+
+;--------------------------------------------------------------------------------
+  fils_cos = systemfunc("ls " + diri_cos + "*.nc")
+
+  do nf = 32,32 ;0, dimsizes(fils_cos)-1 ;BIG LOOP
+  fil_cos  = fils_cos(nf)
 
 ;Retrieve PM25
 ;--------------------------------------------------------------------------------
   opt  = True
-  opt@iy = zyx(1)
-  opt@ix = zyx(2)
+  opt@iy = yloc 
+  opt@ix = xloc
   opt@favg = False
   opt@fdry = True
+  opt@nbdl = nbdl
+  opt@f3d  = False
 
   pm25_v = pm25ART(fil_cos,opt)
   mhgt   = pm25_v&Z   ;Model height a.g.l
@@ -66,19 +94,26 @@ begin
      pcRes@gsnDraw = False
      pcRes@gsnFrame = False
      pcRes@gsnMaximize     = False ;True
-
+     pcRes@txFontHeightF   = 0.02 
+     pcRes@gsMarkerSizeF   = 0.015;
      plot    = new(nlevs,"graphic")
-
-     wks     = gsn_open_wks("png","Figure_pm25")               ; send graphics to PNG file
+     figname = "Figure_pm25_"+nf
+     wks     = gsn_open_wks("x11", figname)               ; send graphics to PNG file
    end if
-   pcRes@tiMainString    = heights(ip) + " m : " + pm25_str + " [" + pm25_v@units + "]"
+   pcRes@tiMainString    = "PM2.5 at " + heights(ip) + " m : " + pm25_str + " [" + pm25_v@units + "]"
    plot(ip)    = pie_chart(wks, percent_f, names_f, colors_f, pcRes)
    delete([/nind,percent_f,names_f,colors_f/])
 
  end do
 
+ 
+ draw(plot)
+ frame(wks)
+
  resP = True
  resP@gsnMaximize         = True
  resP@gsnPanelMainString  = pm25_v@long_name
- gsn_panel(wks,plot,(/2,2/),resP)
+ ;CPS gsn_panel(wks,plot,(/2,2/),resP)
+
+ end do
 end

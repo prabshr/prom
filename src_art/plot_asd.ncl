@@ -7,7 +7,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "PROM1";
+  pname = "KNPROM1";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
@@ -17,6 +17,9 @@ begin
   ;heights     = (/2000.,4000./) ;
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
+  ;nf          = 32
+  glon_idB    = 7.071663 ; Bonn Radar
+  glat_idB    = 50.73052
 
 ;--------------------------------------------------------------------------------
   itype_gscp  = lnd + itype
@@ -28,15 +31,30 @@ begin
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
   fil_cos  = fils_cos(nf)
+
+;;--------------------------------------------------------------------------------
+  ;Identify geo-location and extract model height
+  nc_cosI = addfile(diri_cosI + "/lfff00000000c.nc","r")
+
+  lat     = nc_cosI->lat
+  lon     = nc_cosI->lon
+
+  ;
+  nm      = getind_latlon2d (lat,lon, glat_idB, glon_idB)
+  yloc    = nm(0,0)
+  xloc    = nm(0,1)
+
+  print("Location " + yloc + " " + xloc)
+
 ;--------------------------------------------------------------------------------
   ;Geomeric standard deviations of lognormal modes
   sig = (/1.7, 2.0, 1.7, 2.0, 1.4, 2.5, 1.7, 1.6, 1.5, 1.9, 2.0, 1.7/)
 
   ;Obtain aggregate of 12 log-normal distribution modes
-  opt    = True
-  opt@iy = 90
-  opt@ix = 150
-  opt@favg = True
+  opt      = True
+  opt@iy   = yloc 
+  opt@ix   = xloc
+  opt@favg = False ;True  ;True
   opt@fout = 0   ;Output ASD
   opt@nbdl = 20  ; Crop
 
@@ -99,6 +117,11 @@ begin
   N_cn3 = ceil(dim_sum_n(znlDp3,1)) *nchan
   N_cn4 = ceil(dim_sum_n(znlDp4,1)) *nchan
 
+  N_cn1 = decimalPlaces(N_cn1,2,True)
+  N_cn2 = decimalPlaces(N_cn2,2,True)
+  N_cn3 = decimalPlaces(N_cn3,2,True)
+  N_cn4 = decimalPlaces(N_cn4,2,True)
+ 
   legend1 = heights + " m : N_x = " + N_cn1 + " cm-3"
   legend2 = heights + " m : N_x = " + N_cn2 + " cm-3"
   legend3 = heights + " m : N_x = " + N_cn3 + " cm-3"
@@ -112,7 +135,7 @@ begin
 
   plot = new(4,"graphic")
 
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "Figure_ASD_" + nf + "_" + opt@nbdl ;+ sprinti("%0.2i",iz)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -156,18 +179,20 @@ begin
  res@trXMinF = 1.
  res@trXLog = True
 
- res@trYMaxF = max(znlDp1)
+ yscale = 1.4
+ res@trYMaxF = max(znlDp1)*yscale
  res@gsnLeftString = "nuc./acc. (pure + mixed)"
  plot(0)  =  gsn_csm_xy (wks,Dp,znlDp1,res) ; create plot
- res@trYMaxF = max(znlDp2)
+ res@trYMaxF = max(znlDp2)*yscale
  res@gsnLeftString = "soot + coarse"
  plot(1)  =  gsn_csm_xy (wks,Dp,znlDp2,res)
- res@trYMaxF = max(znlDp3)
+ res@trYMaxF = max(znlDp3)*yscale
  res@gsnLeftString = "dust"
  plot(2)  =  gsn_csm_xy (wks,Dp,znlDp3,res)
- res@trYMaxF = max(znlDp4)
+
+ res@trYMaxF = max(znlDp4)*yscale
  res@gsnLeftString = "sea-salt"
- plot(3)  =  gsn_csm_xy (wks,Dp,znlDp4,res)
+ ;CPS plot(3)  =  gsn_csm_xy (wks,Dp,znlDp4,res)
 
  ; Add legend
  lgres                    = True
@@ -191,12 +216,12 @@ begin
  amres@amParallelPosF   = 0.2
  amres@amOrthogonalPosF = -0.25
  annoid1 = gsn_add_annotation(plot(0),lbid1,amres)
- amres@amParallelPosF   = -0.25
+ amres@amParallelPosF   = 0.25
  annoid2 = gsn_add_annotation(plot(1),lbid2,amres)
- amres@amParallelPosF   = 0.2
+ amres@amParallelPosF   = -0.23
  annoid3 = gsn_add_annotation(plot(2),lbid3,amres)
  amres@amParallelPosF   = -0.25
- annoid4 = gsn_add_annotation(plot(3),lbid4,amres)
+ ;CPS annoid4 = gsn_add_annotation(plot(3),lbid4,amres)
 
 
  if (opt@favg) then

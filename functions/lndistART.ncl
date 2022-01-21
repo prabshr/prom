@@ -2,6 +2,7 @@ undef("lndistART")
 ;Estimate median diameter of lognormal distribution for each mode
 ;Estimate aerosol size distribution of select mode
 ;Estimates of ASD is provide for entire column at select location
+; iy and ix based on entire domain, and favg only applies for fout = 0
 
 ;12 modes in COSMO-ART
 ;4 - nucleation/accumulation (pure and mixed)
@@ -17,6 +18,15 @@ undef("lndistART")
 ;The kth moment of the distribution can be solved as:
 ; M_k = N*(Dpd_i)^k [exp((k^2)/2 * (log(sig_i))^2.]
 ;Ackerman et al. (1998), Whitby 1978;
+
+;--------------------
+;art_specis_data includes the difference species of each mode
+;eg., mode=NUCm,
+;art_aerosol_const has the prescribed parameters of each mode
+;--------------------
+;Important note:
+;This script for the first time step should produce median diameter equivalent to initial diameter 
+;prescribed for each modes, except for dust modes, where number concentrations are also initialized !
 
 ;nbdl for favg, boundary cropped
 
@@ -85,6 +95,8 @@ begin
   PI  = get_pi("float" ) 
   cfac = 1.E-9 * 6.0/PI
 
+  ;Min. diameter
+  dpd_min = 1.E-9 ; m
   ;
   so4fac  = cfac/rhoso4
   nh4fac  = cfac/rhonh4
@@ -198,8 +210,9 @@ begin
   Dpd_i@units     = "m"
   Dpd_i@mode      = smode
   Dpd_i@mname     = mname(imode)
+
  ;Cutoff
-  Dpd_i=Dpd_i>1.E-9
+  ;Dpd_i=Dpd_i>dpd_min
   print("Mode: " + smode + " Median Diameter: " + 1E9*avg(Dpd_i) + " nm" + " Ni " + avg(N_i)/1.E6 + "cm-3 Mi " + avg(M_i))
 
 
@@ -213,11 +226,11 @@ begin
   nDp  = 300
   lp   = new(nDp,"float")
 
-  do ix = 0,nDp-1
-    if (ix.eq.0) then
-       lp(ix) = log(p1)
+  do ic = 0,nDp-1
+    if (ic.eq.0) then
+       lp(ic) = log(p1)
     else
-       lp(ix) = lp(ix-1) + nchan
+       lp(ic) = lp(ic-1) + nchan
     end if
   end do
   Dp = exp(lp)
@@ -259,8 +272,14 @@ begin
     do ib = 0, nDp-1
     print("Averaging for mode :" + ib)
     do iz = 0, nz-1
-       rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1))) 
-       rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1))) 
+       if (iy.ne.-99 .and. ix.ne.-99) then
+          print("Averaging at " + iy + " " + ix + " with 9x9 box")
+          rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,iy-4:iy+4,ix-4:ix+4)))
+          rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,iy-4:iy+4,ix-4:ix+4)))
+       else  
+          rnlDp(0,ib,iz) = avg(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1))) 
+          rnlDp(1,ib,iz) = stddev(ndtooned(nlDp3d(ib,iz,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1))) 
+       end if
     end do
     end do
   end if

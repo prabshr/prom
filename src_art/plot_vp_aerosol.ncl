@@ -1,10 +1,8 @@
-;Plot diurnal cycle of Nx or Mx of different aerosol modes
-; at specified height in 4 different subplots
-; Plots spatial average and standard deviation for 9x9 box centered at iy,ix in log scale
+;Plot ensemble vertical profile of aerosols 
+;Avgerage vertical profile plots for 9x9 box surrounding lat/lon
 
 load "$prom_root/functions/lndistART.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
+load "$prom_root/functions/pm25ART.ncl"
 
 function logtransform(xval)
 begin
@@ -20,23 +18,21 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "PROM1";
-  einst = (/5,6,7,8,9/)
+  pname = "KNPROM1";
+  einst = (/6/) ;(/5,6,7,8,9/)
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
+  fprcs = True   ;Read data and process
 
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
-  nbdl        = 0   ;Always 0 in this code, for iy,ix reference
-  height      = 2000 ;m a.msl
+  nbdl        = 0    ;Keep 0 because of difference in lndist and pm25 reference for iy and ix
   glon_idB    = 7.071663 ; Bonn Radar
   glat_idB    = 50.73052
-  fprcs       = False ;True ; Process or read processed data
-  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
-                 "dust", "sea-salt"/)
+  ext         = 4        ; 4 + 4 + 1 ~ 10 grid cells averaging
+  nf          = 32
 ;--------------------------------------------------------------------------------
-
   if (fprcs) then       ;Process data extraction
 
   do ens = 0, dimsizes(einst)-1    ;ENSEMBLE LOOP
@@ -51,26 +47,29 @@ begin
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
 ;;--------------------------------------------------------------------------------
-  ;Identify model level based on height
+  ;Identify geo-location and extract model height
   nc_cosI = addfile(diri_cosI + "/lfff00000000c.nc","r")
   tmp     = nc_cosI->lat
 
   ndim    = dimsizes(tmp)
-  hhl     = nc_cosI->HHL(0,:,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
-  lat     = nc_cosI->lat(nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
-  lon     = nc_cosI->lon(nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+  hhl     = nc_cosI->HHL(0,:,:,:)
+  lat     = nc_cosI->lat
+  lon     = nc_cosI->lon
+
+  delete(ndim)
+  ndim    = dimsizes(hhl)
+  Z       = 0.5 * (hhl(0:ndim(0)-2,:,:) + hhl(1:ndim(0)-1,:,:))
+  Z       = Z(::-1,:,:)
+  nz      = ndim(0)-1
+  delete(ndim)
 
   ;
   nm      = getind_latlon2d (lat,lon, glat_idB, glon_idB)
   yloc    = nm(0,0)
   xloc    = nm(0,1)
+  height  = Z(:,yloc,xloc)/1000. ;m
 
-  print("Location " + yloc + " " + xloc)
-
-  delete(ndim)
-  ndim    = dimsizes(hhl)
-  Zw      = 0.5 * (hhl(0:ndim(0)-2,:,:) + hhl(1:ndim(0)-1,:,:))
-  Z       = Zw(::-1,yloc-4:yloc+4,xloc-4:xloc+4)
+  print("Location " + yloc + " " + xloc) 
 
 ;--------------------------------------------------------------------------------
   ;Geomeric standard deviations of lognormal modes
@@ -80,25 +79,21 @@ begin
   opt    = True
   opt@iy = yloc
   opt@ix = xloc
-  opt@favg = True
+  opt@favg = True  ;Only for fout <1
   opt@fout = 1  
   opt@nbdl = nbdl
 
   smodes = ispan(1,12,1) 
 
+;Retrieve Ncm3 and PM2.5
+;--------------------------------------------------------------------------------
   nf_cos = dimsizes(fils_cos)
-
-  time = ispan(0,nf_cos-1,1) 
-  data = new((/4,nf_cos/),"float")
-  sdata = data
-
-  do nf = 0, nf_cos-1   ;BIG LOOP
-
   fil_cos = fils_cos(nf)
 
+  ;Ncm3
   do im = 0, dimsizes(smodes)-1
     opt@smode = smodes(im)
-    if (nf.eq.0 .and. im.eq.0) then
+    if (im.eq.0) then
       temp = lndistART(fil_cos,opt)
       ndim = dimsizes(temp)
       varo = new((/12,ndim(0),ndim(1),ndim(2)/),"float")
@@ -107,31 +102,50 @@ begin
     varo(im,:,:,:) = lndistART(fil_cos,opt)
   end do
 
- ;Extract sums at specific height
-  varo1 = dim_sum_n(varo(0:3,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;nuc-acc mode ;small
-  varo2 = dim_sum_n(varo(4:5,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;dust
-  varo4 = dim_sum_n(varo(10:11,:,yloc-4:yloc+4,xloc-4:xloc+4),0)   ;sea
+ ;Extract sums 
+  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
+                 "dust", "sea-salt"/)
 
-  varoz1 = wrf_user_intrp3d(varo1,Z,"h",height,0., False)
-  varoz2 = wrf_user_intrp3d(varo2,Z,"h",height,0., False)
-  varoz3 = wrf_user_intrp3d(varo3,Z,"h",height,0., False)
-  varoz4 = wrf_user_intrp3d(varo4,Z,"h",height,0., False)
+ ;Extract sums for cropped region
+  varo1 = dim_sum_n(varo(0:3,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;nuc-acc mode ;small
+  varo2 = dim_sum_n(varo(4:5,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;soot+coarse
+  varo3 = dim_sum_n(varo(6:9,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;dust
+  varo4 = dim_sum_n(varo(10:11,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)   ;sea
 
-  data(0,nf) = avg(varoz1)
-  data(1,nf) = avg(varoz2)
-  data(2,nf) = avg(varoz3)
-  data(3,nf) = avg(varoz4)
+ ;PM2.5
+  popt  = True
+  popt@iy = yloc
+  popt@ix = xloc
+  popt@favg = False
+  popt@fdry = True
+  popt@nbld = nbdl
+  popt@f3d  = True
 
-  sdata(0,nf) = stddev(varoz1)
-  sdata(1,nf) = stddev(varoz2)
-  sdata(2,nf) = stddev(varoz3)
-  sdata(3,nf) = stddev(varoz4)
- 
- end do ;BIG LOOP
+  pm25 = pm25ART(fil_cos,popt)   ;Replace sea aerosol and concn very low
 
- if (ens.eq.0) then
-    edata = new((/4,dimsizes(einst),nf_cos/),"float")
+  ;Extract sums for cropped region
+  pm25_4 = pm25(:,yloc-ext:yloc+ext,xloc-ext:xloc+ext)
+
+;--------------------------------------------------------------------------------
+  data = new((/4,nz/),"float")
+  sdata = data
+
+  do iz = 0, nz-1
+    data(0,iz) = avg(varo1(iz,:,:))
+    data(1,iz) = avg(varo2(iz,:,:))
+    data(2,iz) = avg(varo3(iz,:,:))
+    ;data(3,iz) = avg(varo4(iz,:,:))
+    data(3,iz) = avg(pm25_4(iz,:,:))    
+
+    sdata(0,iz) = stddev(varo1(iz,:,:))
+    sdata(1,iz) = stddev(varo2(iz,:,:))
+    sdata(2,iz) = stddev(varo3(iz,:,:))
+    ;sdata(3,iz) = stddev(varo4(iz,:,:))
+    sdata(3,iz) = stddev(pm25_4(iz,:,:))
+  end do
+
+  if (ens.eq.0) then
+    edata = new((/4,dimsizes(einst),nz/),"float")
     esdata = edata
   end if
 
@@ -139,23 +153,13 @@ begin
   esdata(:,ens,:) = sdata
   end do      ;ENSEMBLE LOOP
 
-  foutname = "art-diurnal-profile_" + height+".nc"
+  foutname = "art-vertical-profile.nc"
   system("rm " + foutname)
   fout = addfile(foutname,"c")
   fout->Band1 = (/edata/)
   fout->Band2 = (/esdata/)
 
-  else
-    foutname = "art-diurnal-profile_" + height+".nc"
-    fout = addfile("./data/" + foutname,"r")
-    edata = fout->Band1 
-   esdata = fout->Band2 
-    ndim  = dimsizes(edata)
-   nf_cos = ndim(2)
-   time   = ispan(0,nf_cos-1,1) + 6
-   time@units = "hours since 2015-07-04 00:00:00" 
   end if ;fprcs = True
-
 ;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
@@ -164,13 +168,13 @@ begin
   dum  = new(4,"graphic")
 
 
-  wks_type = "png"
-  fname_out = "Figure_aerosol_diurnal_" + height
+  wks_type = "x11"
+  fname_out = "Figure_vp_" + sprinti("%0.2i",nf) 
   wks = gsn_open_wks(wks_type,fname_out)
 
   fncps_no = ":F21:"
   fncps_no = 21
-  fncps_hgt = 0.02
+  fncps_hgt = 0.02 *1.8
 
  res                            = True                 ; plot mods desired
  res@gsnDraw                    = False
@@ -197,54 +201,48 @@ begin
  res@tiXAxisFontHeightF         = fncps_hgt
  res@tiYAxisFontHeightF         = fncps_hgt
  
- res@xyMarkLineMode             = "MarkLines"
- res@xyMarker                   = 16 
+ res@xyLineThicknessF           = 3.
  res@xyDashPattern              = 0
- res@xyLineThicknessF           = 4.
- res@xyLineColor                = "gray"
- res@tiXAxisString              = "Time (UTC)"
+ res@tiYAxisString              = "Height [km]"
+ res@tiXAxisString              = "[cm~S~-3~N~]"
 
- res@vpWidthF       = 0.65
- res@vpHeightF      = 0.4
+ res@vpWidthF       = 0.5
+ res@vpHeightF      = 0.7
 
- ;res@trYLog         = True
- res@trYMaxF        = 3500.
- res@trYMinF        = 0
- ;res@trXMaX
+ res@trXLog         = True
+ res@trXMaxF        = 1.E4
+ res@trXMinF        = 0.01
+ res@trYMaxF        = 16.0 ;km
 
  gsres                   = True                        ; poly res
  gsres@tfPolyDrawOrder   = "Predraw"                   ; draw this first
  gsres@gsFillColor       = "SlateBlue"                 ; color chosen
  gsres@gsFillOpacityF    = 0.2
 
+ do ip = 0, 3
+ res@gsnLeftString = namemods(ip)
+ if (ip.eq.3) then
+   res@gsnLeftString = "  PM2.5"
+   res@trXLog = False
+   res@trXMinF = 0.
+   res@trXMaxF = 20.0
+   res@tiXAxisString              = "[~F8~m~F21~g~N~m~S~-3~N~]"
+ end if
+ if (ip.gt.0) then
+   res@tiYAxisString = ""
+   res@tmYLLabelsOn = False
+ end if
 
- restick = True
- restick@ttmFormat = "%h"
- restick@ttmAxis = "XB"
- restick@ttmNumTicks = 5
- restick@ttmValues = (/(/2015,7,4,0,0,0/), \
-                       (/2015,7,4,6,0,0/), \
-                       (/2015,7,4,12,0,0/), \
-                       (/2015,7,4,18,0,0/), \
-                       (/2015,7,5,0,0,0/), \
-                       (/2015,7,5,6,0,0/), \
-                       (/2015,7,5,12,0,0/), \
-                       (/2015,7,5,18,0,0/), \
-                       (/2015,7,6,0,0,0/)/)
-
- do ip = 0, 0 ;3
-   res@gsnLeftString = namemods(ip)
-   res@tiYAxisString = "N [cm~S~-3~N~]"
-   time_axis_labels(time,res,restick)
-   plot(ip) = gsn_csm_xy(wks,time,edata(ip,:,:),res)
+ plot(ip) = gsn_csm_xy(wks,edata(ip,:,:),height,res)
 
  end do
 
- draw(plot)
- frame(wks)
- ;resP  = True
- ;resP@gsnPanelMainString = "Height = " + height + " m a. msl" ;nlDp@time 
- ;gsn_panel(wks,plot,(/2,2/), resP)
+ resP  = True
+ resP@gsnPanelMainString = varo@time
+ resP@gsnPanelDebug = True
+ resP@gsnPanelXF = (/0.05,0.26,0.47,0.68/) + 0.02
+
+ gsn_panel(wks,plot,(/1,4/), resP)
 
 
 end

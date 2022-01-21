@@ -11,30 +11,37 @@ load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
 
+load "$prom_root/functions/lndistART.ncl"
+load "$prom_root/functions/pm25ART.ncl"
 
 begin
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------
- pid       = 0
- ydates    = (/"20150705","20160513","20170706"/)
- lndcov    = (/"HET","HET","HET"/)
- insts     = (/6, 8, 11/)
- fns       = (/36,34,18/) 
- ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
- ixs       = (/60,124,95/) + 65  ;stack emission 
+;-----------------------------------------------------------------------------------------
+;#1 USER SETTINGS
+;-----------------------------------------------------------------------------------------
+  pname = "KNPROM1";
+  inst  = 6
+  lnd   = "HET"
+  itype = "ART"
+  diri  = "/p/largedata/hbn33/shrestha1/"
 
- lat_ext1  = (/51.2, 50.8, 51./)
- lat_ext0 = (/50.0+48./60.,50.+10./60.,50.42/)
+  nf          = 32
+  glon_idB    = 7.071663 ; Bonn Radar
+  glat_idB    = 50.73052
 
- diri      = "/p/largedata/hbn33/shrestha1/"
-; diri      = "/daten04/pshrestha/shared-data/"
-
- diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/" 
- diri_cosI = diri_cos + "/ivr/" 
+;--------------------------------------------------------------------------------
+  itype_gscp  = lnd + itype
+  sfold       = "runART_" + inst + "_" + itype_gscp
+  expname     = itype_gscp + "_" + pname
+  subevent    = expname + "/" + sfold
+  diri_cos    = diri + "/" + subevent + "/cosout/"
+  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
- tracers = (/"NO","SO2","VANTHA","VSOOT"/)
+ tracers = (/"NO2","SO2","VANTHA","VSOOT"/)
+ fprocs  = True  ;tracers will be updated with processed Ncm3 and PM2.5
 
 ;STEP 3  READ NC FILES
 ;-------------------------------------------------------------------------------------
@@ -52,11 +59,21 @@ begin
 ;
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
- nc_cos    = addfile(fils_cos(fns(pid)),"r")
+ nc_cos    = addfile(fils_cos(nf),"r")
  time      = nc_cos->time
  ;
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
- print("Processing ..." + fns(pid) + "  " + str_time)
+ print(" " + fils_cos(nf))
+ print("Processing ..." + nf + "  " + str_time)
+
+ lat     = nc_cosI->lat
+  lon     = nc_cosI->lon
+
+ ;
+ nm     = getind_latlon2d (lat,lon, glat_idB, glon_idB)
+ iys    = nm(0,0)
+ ixs    = nm(0,1)
+
 
 ;STEP 4 Prognostic state variables
 ;------------------------------------------------------------------------------
@@ -81,30 +98,92 @@ begin
    varh(ih,:,:,:) = (/nc_cos->$(tracers(ih))$(0,::-1,:,:)/)
  end do
 
+ if (fprocs) then
+; Step 5b Retrieve Ncm3 and PM2.5
+;--------------------------------------------------------------------------------
+  ;Geomeric standard deviations of lognormal modes
+  sig = (/1.7, 2.0, 1.7, 2.0, 1.4, 2.5, 1.7, 1.6, 1.5, 1.9, 2.0, 1.7/)
+
+  ;Obtain aggregate of 12 log-normal distribution modes
+  opt    = True
+  opt@iy = -99 ;yloc
+  opt@ix = -99 ;xloc
+  opt@favg = True  ;Only for fout <1
+  opt@fout = 1
+  opt@nbdl = 0 
+
+  smodes = ispan(1,12,1)
+
+
+  nf_cos = dimsizes(fils_cos)
+  fil_cos = fils_cos(nf)
+
+  ;Ncm3
+  do im = 0, dimsizes(smodes)-1
+    opt@smode = smodes(im)
+    if (im.eq.0) then
+      temp = lndistART(fil_cos,opt)
+      ndim = dimsizes(temp)
+      varo = new((/12,ndim(0),ndim(1),ndim(2)/),"float")
+      delete(ndim)
+    end if
+    varo(im,:,:,:) = lndistART(fil_cos,opt)
+  end do
+
+ ;Extract sums
+  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
+                 "dust", "PM2.5"/) ;"sea-salt"/)
+
+ ;Extract sums for cropped region
+  varo1 = dim_sum_n(varo(0:3,:,:,:),0)     ;nuc-acc mode ;small
+  varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
+  varo3 = dim_sum_n(varo(6:9,:,:,:),0)     ;dust
+;  varo4 = dim_sum_n(varo(10:11,:,:,:),0)   ;sea
+
+ ;PM2.5
+  popt  = True
+  popt@iy = iys
+  popt@ix = ixs 
+  popt@favg = False
+  popt@fdry = True
+  popt@nbld = 0
+  popt@f3d  = True
+
+  pm25 = pm25ART(fil_cos,popt)   ;Replace sea aerosol and concn very low
+
+  ;;
+  varh(0,:,:,:) = varo1
+  varh(1,:,:,:) = varo2
+  varh(2,:,:,:) = varo3
+  varh(3,:,:,:) = pm25 
+
+  tracers = namemods
+ end if ;fprocs
+
 ;STEP 6 Variable to plot
 ;------------------------------------------------------------------------------
- spol          = dim_sum_n(varh(:,:,:,ixs(pid)),0)         ;
+ spol          = dim_sum_n(varh(:,:,:,ixs),0)         ;
  spol_val      = where(spol.gt.0.01,1.,0)
  spol_edge     = convol(spol_val)
 
  sdims         = dimsizes(spol)
  spol!0        = "Z"
  spol!1        = "Y"
- spol&Y        = lat(:,ixs(pid)) ; 
+ spol&Y        = lat(:,ixs) ; 
  xval2x        = conform_dims(sdims,spol&Y,1)*1.
- zval2x        = zmodel(:,:,ixs(pid))
+ zval2x        = zmodel(:,:,ixs)
 
- tairC         = tair(:,:,ixs(pid)) - 273.16
- uy_yp         = uy(:,:,ixs(pid))
- uz_yp         = uz_hhl(:,:,ixs(pid))
+ tairC         = tair(:,:,ixs) - 273.16
+ uy_yp         = uy(:,:,ixs)
+ uz_yp         = uz_hhl(:,:,ixs)
 
  copy_VarCoords(spol,tairC)   
  copy_VarCoords(spol, uy_yp)  
  copy_VarCoords(spol, uz_yp) 
 
  ;Need this for vector plot as stretching does not work
- uy_yp&Z      = zmodel(:,90,ixs(pid))
- uz_yp&Z      = zmodel(:,90,ixs(pid))
+ uy_yp&Z      = zmodel(:,90,ixs)
+ uz_yp&Z      = zmodel(:,90,ixs)
  
 ; for terrain shading
  xypoly  = shade_terrain(xval2x,zval2x)
@@ -127,7 +206,7 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_QX_rhi_"+pid + "_" + str_time)
+ wks      = gsn_open_wks("x11", "Figure_art_rhi_"+nf)
 
  cmap = read_colormap_file("cmp_flux")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -152,11 +231,11 @@ begin
  res@tmXTOn                     = False
  res@tmXBLabelFontColor         = "black"
  res@tmYLLabelFontColor         = "black"
- res@tmXBLabelFontThicknessF    = 2.0
- res@tmXBMode   = "Explicit"
- res@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20))
- res@tmXBLabels = tointeger((res@tmXBValues)*100.)/100.
- res@tmXBLabelsOn  = False 
+ ;res@tmXBLabelFontThicknessF    = 2.0
+ ;res@tmXBMode   = "Explicit"
+ ;res@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20))
+ ;res@tmXBLabels = tointeger((res@tmXBValues)*100.)/100.
+ ;res@tmXBLabelsOn  = False 
 
  ;ti Resources
  ;-----------------
@@ -179,8 +258,8 @@ begin
 
  ;tr resources
  ;--------------------
- res@trXMinF    = lat_ext0(pid)
- res@trXMaxF    = lat_ext1(pid)
+ res@trXMinF    = glat_idB - .6
+ res@trXMaxF    = glat_idB + 1.2 
  res@trYMaxF    = 3.
 
  ;For vector plots
@@ -200,6 +279,22 @@ begin
  res@cnFillPalette              = cmap
  res@cnFillMode = "CellFill"
  res@cnLinesOn  = False
+ if (fprocs) then
+   res@trYMaxF = 15.
+   res@cnLevelSelectionMode       = "ExplicitLevels"
+   res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8., \
+                  10., 20., 40., 60., 80., \
+                  100., 200., 400., 600., 800., \
+                  1000., 2000., 4000., 6000., 8000. /)
+ else
+   res@cnLevelSelectionMode       = "ExplicitLevels"
+   res@cnLevels = (/0.001,   \
+                  0.01, 0.02, 0.04, 0.06, 0.08, \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8./)
+ end if
 
  ;For Overlaying plots
  ;--------------------
@@ -207,6 +302,8 @@ begin
  reso@cnLevelSelectionMode       = "ExplicitLevels"
  reso@cnLevels = (/0./)
  reso@tmXBLabelsOn  = True
+ reso@cnLineLabelFontHeightF = 0.02
+ reso@cnLineThicknessF = 3.
  do ic = 0,3
    dumt(ic)     = gsn_csm_contour(wks,tairC,reso)
  end do
@@ -232,7 +329,7 @@ begin
  ;
  tc = 0
  res@gsnRightString = tracers(tc) ;+ " [" + hydunits + "]" 
- spol          = (/varh(tc,:,:,ixs(pid))/)  
+ spol          = (/varh(tc,:,:,ixs)/)  
  plot(0)  = gsn_csm_contour(wks,spol,res)
 
  ;
@@ -240,21 +337,28 @@ begin
  res@tiYAxisString = ""
  res@tmYLLabelsOn  = False
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs(pid))/)   
+ spol          = (/varh(tc,:,:,ixs)/)   
 
  plot(1)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 2
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs(pid))/)
+ spol          = (/varh(tc,:,:,ixs)/)
  plot(2)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 3
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs(pid))/)
+ spol          = (/varh(tc,:,:,ixs)/)
+ if (fprocs) then
+  delete(res@cnLevels)
+  cnlev = ispan(0,20,2)*1.0 ;
+  cnlev(0) = 0.1
+  res@cnLevels = cnlev
+ end if
  plot(3)  = gsn_csm_contour(wks,spol,res) 
+
 
  ;Now Overlay
  do ic = 0,3
@@ -277,5 +381,6 @@ begin
  resP@gsnMaximize    = True
  ;resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
  ;resP@gsnPanelDebug = True
+ resP@gsnPanelMainString = str_time
  gsn_panel(wks,plot,(/2,2/), resP)
 end

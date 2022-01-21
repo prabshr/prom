@@ -1,6 +1,7 @@
 undef("pm25ART")
 ;Estimate PM25 chemical composition of aerosol
-;Vertiacal profiles of 10 differentiated species are returned
+;Vertical profiles of 10 differentiated species are returned
+;if f3d = True, 3D profiles are returned
 ;AQMEII-2 project setup
 
 function pm25ART(fil_cos,opt)
@@ -10,6 +11,8 @@ begin
   ix    = opt@ix
   favg  = opt@favg
   fdry  = opt@fdry
+  nbdl  = opt@nbdl
+  f3d   = opt@f3d
 
   nc_cos   = addfile(fil_cos,"r")
 
@@ -101,5 +104,14 @@ begin
      pm25(8,:) = (/pm25_seas(0,:,iy,ix)/)
    end if
 
-   return(pm25(:,::-1))   
+   if (f3d) then
+     pm25_3d = pm25_so4 + pm25_no3 + pm25_nh4 + pm25_ec + pm25_poc + \
+                pm25_inorg + pm25_soa + pm25_crust + pm25_seas
+     if (.not.(fdry)) then
+       pm25_3d = pm25_3d + pm25_h2o
+     end if
+     return(pm25_3d(0,::-1,:,:))
+   else
+     return(pm25(:,::-1))   
+   end if
 end
