@@ -12,7 +12,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- pname = "KNPROM1";
+ pname = "EMPAPROM2";
  inst  = 6
  lnd   = "HET"
  itype = "ART"
@@ -30,9 +30,9 @@ begin
 ;--------------------------------------------------------------------------------
 
   itype_gscp  = lnd + itype
-  sfold       = "runART_" + inst + "_" + itype_gscp
-  expname     = itype_gscp + "_" + pname
-  subevent    = expname + "/" + sfold
+  sfold       = "runE_" + inst + "_" + itype_gscp
+  expname     = lnd + "_" + pname
+  subevent    = expname + "/" + itype_gscp + "/" + sfold
   diri_cos    = diri + "/" + subevent + "/cosout/"
   diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
 
@@ -76,8 +76,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#2b Extract lognormal ASD for each mode
 ;-----------------------------------------------------------------------------------------
-  do nf = 32, 32 
-  ;CPS do nf = 0,dimsizes(fils_cos)-1
+  do nf = 32,32 ;dimsizes(fils_cos)-1
 
   fil_cos  = fils_cos(nf)
 
@@ -128,6 +127,9 @@ begin
   fname_out = "Figure_airmass_" + sprinti("%0.2i",nf)
   wks = gsn_open_wks(wks_type,fname_out)
 
+  cmap = read_colormap_file("ncl_default")
+  cmap(0,:) = (/1., 1., 1., 1./)
+
   fncps_no = ":F21:"
   fncps_no = 21
   fncps_hgt = 0.02
@@ -158,11 +160,18 @@ begin
  res@tiYAxisFontHeightF         = fncps_hgt
 
  res@cnFillOn = True
+  res@cnFillPalette              = cmap
  res@cnLinesOn = False
  res@cnLevelSelectionMode    = "ExplicitLevels"
  res@cnFillOpacityF          = 0.5
  res@cnInfoLabelFontColor    = "grey"
- res@cnLevels                = (/0.05,0.1,0.5,1.0,5.0,10.,50.,100.,500.,1000.,1500.,2000./)
+ ;res@cnLevels                = (/0.05,0.1,0.5,1.0,5.0,10.,50.,100.,500.,1000.,1500.,2000./)
+ res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8., \
+                  10., 20., 40., 60., 80., \
+                  100., 200., 400., 600., 800., \
+                  1000., 2000., 4000., 6000., 8000. /)
  res@cnLineLabelsOn           = False
  res@cnInfoLabelOn           = False
 
@@ -203,9 +212,9 @@ begin
  res@lbOrientation              = "vertical"
  res@lbTitleString              = "nuc./acc.~C~(pure+mixed)" ;punits(0)
  res@lbTitleFontHeightF         = 0.015
- res@lbLabelFontHeightF         = 0.015
+ res@lbLabelFontHeightF         = 0.012
  res@pmLabelBarWidthF           = 0.05
- res@pmLabelBarHeightF          = 0.35
+ res@pmLabelBarHeightF          = 0.5
 
 
  plot(0) = gsn_csm_contour_map(wks,varoz1,res)

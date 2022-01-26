@@ -38,9 +38,9 @@ begin
   do ens = 0, dimsizes(einst)-1    ;ENSEMBLE LOOP
 
   itype_gscp  = lnd + itype
-  sfold       = "runART_" + einst(ens) + "_" + itype_gscp
-  expname     = itype_gscp + "_" + pname
-  subevent    = expname + "/" + sfold
+  sfold       = "runE_" + inst + "_" + itype_gscp
+  expname     = lnd + "_" + pname
+  subevent    = expname + "/" + itype_gscp + "/" + sfold
   diri_cos    = diri + "/" + subevent + "/cosout/"
   diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
 

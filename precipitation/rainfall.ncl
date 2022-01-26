@@ -27,16 +27,20 @@ begin
 ;-----------------------------------------------------------------------------------------
 
  ;;MODEL OUTPUT
- diri        = "/p/project/chbn33/hbn331/" ;"/p/scratch/chbn33/hbn331/"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705/"
- event       = "runE_" + inst + "_"
- case        = "HET2483"
+ pname = "PROM1";
+ inst  = 6
+ lnd   = "HET"
+ itype = "2483"
+ diri  = "/p/largedata/hbn33/shrestha1/"
+ ;diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705/"
 
- diri_cos    = diri + "/" + case + "/" + event + case + "/cosout/"
- diri_cosI   = diri + "/" + case + "/" + event + case + "/cosout/ivr/"
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
 
- diri_cos = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/"
- diri_cosI = "/p/largedata/hbn33/shrestha1/HET_ART_20150705/runART_6a_HET/cosout/ivr/"
+ diri_cos    = diri + "/" + subevent + "/cosout/"
+ diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
 
  inset       = False
  
@@ -44,13 +48,12 @@ begin
  glon_id = (/7.071663, 7.00/) ;
  glat_id = (/50.73052, 50.6/) ;
  gmarker = (/10,9/)
- varname = "TOT_PREC" ; 
+ varname = "TOT_PREC" ;;"HAIL_GSP" ;"TOT_PREC" ; 
  varminmax = (/0, 30, 5/) 
 
 ;-----------------------------------------------------------------------------------------
 ; SELECT FILES and EXTENTS for Plots 
 ;-----------------------------------------------------------------------------------------
- filindex      = ispan(0,1,1) 
  ;dext          = 1.5
  ;mpcorner      = (/glat_id(0)-dext,glon_id(0)-dext,glat_id(0)+dext,glon_id(0)+dext/)
  nbdl          = 3 + 17  ;exclude boundaries and relaxation zone
@@ -80,8 +83,9 @@ begin
  nf_cos   = dimsizes(fils_cos)
 
 ;Read specified variables
-; nf_ctr = dimsizes(filindex) 
- nf_ctr  =nf_cos
+ filindex = ispan(32,nf_cos-1,1)
+ nf_ctr = dimsizes(filindex)
+
  varout = new((/nf_ctr, ndimc(0),ndimc(1)/),float)
  str_time = new(nf_ctr, "string")
  xtime    = new(nf_ctr,"float")
@@ -97,10 +101,12 @@ begin
   ix(ii) = nm(ii,1)
  end do
 ;
- do fnctr = nf_ctr-2, nf_ctr-1   ;;BIG LOOP OVER FILES 
+ 
+ do fnctr = 0, nf_ctr-1   ;;BIG LOOP OVER FILES 
    
-   fn = fnctr ;filindex(fnctr)
+   fn = filindex(fnctr)
    nc_cos = addfile(fils_cos(fn),"r")
+   nc_cos0 = addfile(fils_cos(fn-1),"r")
    print(" " + fils_cos(fn))
    time     = nc_cos->time
    dtime = calendar_decode2(time,-5)
@@ -118,12 +124,13 @@ begin
    xtime(fnctr) = hh*1.0
 ;
    print(fils_cos(fn) + " " +str_time(fnctr))
-   varout(fnctr,:,:)  = (nc_cos->$varname$(0,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1))
-
+   varout(fnctr,:,:)  = (nc_cos->$varname$(0,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)) \
+                        - (nc_cos0->$varname$(0,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1))
+                
 ;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
- fname_out = "Figure_rain_"+case + "_"+sprinti("%0.2i",inst)
+ fname_out = "Figure_rain_"+ expname + "_"+sprinti("%0.2i",inst)
  fncps_no = ":F21:"
  fncps_no = 21
  fncps_hgt = 0.028
@@ -212,8 +219,8 @@ begin
 
  print("Min : " + min(pvarout) + " Max : " + max(pvarout))
  res@gsnRightString             = " mm"
- res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   = ispan(varminmax(0),varminmax(1),varminmax(2))
+ ;CPS res@cnLevelSelectionMode       = "ExplicitLevels"
+ ;CPS res@cnLevels                   = ispan(varminmax(0),varminmax(1),varminmax(2))
 
 
  plot(0)                         = gsn_csm_contour_map(wks, pvarout, res)

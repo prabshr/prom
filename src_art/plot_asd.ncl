@@ -7,7 +7,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "KNPROM1";
+  pname = "EMPAPROM2";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
@@ -23,9 +23,9 @@ begin
 
 ;--------------------------------------------------------------------------------
   itype_gscp  = lnd + itype
-  sfold       = "runART_" + inst + "_" + itype_gscp
-  expname     = itype_gscp + "_" + pname
-  subevent    = expname + "/" + sfold
+  sfold       = "runE_" + inst + "_" + itype_gscp
+  expname     = lnd + "_" + pname
+  subevent    = expname + "/" + itype_gscp + "/" + sfold
   diri_cos    = diri + "/" + subevent + "/cosout/"
   diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
 

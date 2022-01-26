@@ -30,7 +30,7 @@ begin
   glon_idB    = 7.071663 ; Bonn Radar
   glat_idB    = 50.73052
 
- ;--------------------------------------------------------------------------------
+;--------------------------------------------------------------------------------
   itype_gscp  = lnd + itype
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
@@ -162,28 +162,28 @@ begin
 
 ;STEP 6 Variable to plot
 ;------------------------------------------------------------------------------
- spol          = dim_sum_n(varh(:,:,:,ixs),0)         ;
+ spol          = dim_sum_n(varh(:,:,iys,:),0)         ;
  spol_val      = where(spol.gt.0.01,1.,0)
  spol_edge     = convol(spol_val)
 
  sdims         = dimsizes(spol)
  spol!0        = "Z"
  spol!1        = "Y"
- spol&Y        = lat(:,ixs) ; 
+ spol&Y        = lon(iys,:) ; 
  xval2x        = conform_dims(sdims,spol&Y,1)*1.
- zval2x        = zmodel(:,:,ixs)
+ zval2x        = zmodel(:,iys,:)
 
- tairC         = tair(:,:,ixs) - 273.16
- uy_yp         = uy(:,:,ixs)
- uz_yp         = uz_hhl(:,:,ixs)
+ tairC         = tair(:,iys,:) - 273.16
+ uy_yp         = uy(:,iys,:)
+ uz_yp         = uz_hhl(:,iys,:)
 
  copy_VarCoords(spol,tairC)   
  copy_VarCoords(spol, uy_yp)  
  copy_VarCoords(spol, uz_yp) 
 
  ;Need this for vector plot as stretching does not work
- uy_yp&Z      = zmodel(:,90,ixs)
- uz_yp&Z      = zmodel(:,90,ixs)
+ uy_yp&Z      = zmodel(:,iys,ixs)
+ uz_yp&Z      = zmodel(:,iys,ixs)
  
 ; for terrain shading
  xypoly  = shade_terrain(xval2x,zval2x)
@@ -206,7 +206,7 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_art_rhi_"+nf)
+ wks      = gsn_open_wks("png", "Figure_art_rhi_"+nf)
 
  cmap = read_colormap_file("ncl_default")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -258,8 +258,8 @@ begin
 
  ;tr resources
  ;--------------------
- res@trXMinF    = glat_idB - .6
- res@trXMaxF    = glat_idB + 1.2 
+ ;res@trXMinF    = glon_idB - .6
+ ;res@trXMaxF    = glon_idB + 1.2 
  res@trYMaxF    = 3.
 
  ;For vector plots
@@ -329,7 +329,7 @@ begin
  ;
  tc = 0
  res@gsnRightString = tracers(tc) ;+ " [" + hydunits + "]" 
- spol          = (/varh(tc,:,:,ixs)/)  
+ spol          = (/varh(tc,:,iys,:)/)  
  plot(0)  = gsn_csm_contour(wks,spol,res)
 
  ;
@@ -337,20 +337,20 @@ begin
  res@tiYAxisString = ""
  res@tmYLLabelsOn  = False
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs)/)   
+ spol          = (/varh(tc,:,iys,:)/)   
 
  plot(1)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 2
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs)/)
+ spol          = (/varh(tc,:,iys,:)/)
  plot(2)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 3
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
- spol          = (/varh(tc,:,:,ixs)/)
+ spol          = (/varh(tc,:,iys,:)/)
  if (fprocs) then
   delete(res@cnLevels)
   cnlev = ispan(0,20,2)*1.0 ;
