@@ -18,8 +18,8 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "KNPROM1";
-  einst = (/6/) ;(/5,6,7,8,9/)
+  pname = "EMPA2_PROM1";
+  einst = (/5,6,7,8,9/)
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
@@ -28,7 +28,7 @@ begin
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
   nbdl        = 0    ;Keep 0 because of difference in lndist and pm25 reference for iy and ix
-  glon_idB    = 7.071663 ; Bonn Radar
+  glon_idB    = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB    = 50.73052
   ext         = 4        ; 4 + 4 + 1 ~ 10 grid cells averaging
   nf          = 32
@@ -38,11 +38,11 @@ begin
   do ens = 0, dimsizes(einst)-1    ;ENSEMBLE LOOP
 
   itype_gscp  = lnd + itype
-  sfold       = "runE_" + inst + "_" + itype_gscp
+  sfold       = "runE_" + einst(ens) + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -103,14 +103,17 @@ begin
   end do
 
  ;Extract sums 
-  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
+  namemods   = (/"nuc./acc. (pure + mixed)", "soot", \
                  "dust", "sea-salt"/)
+
+  snamemods  = (/"N~B~na~N~","N~B~soot~N~","N~B~dust~N~","N~B~seas~N~"/)
 
  ;Extract sums for cropped region
   varo1 = dim_sum_n(varo(0:3,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;nuc-acc mode ;small
-  varo2 = dim_sum_n(varo(4:5,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;dust
-  varo4 = dim_sum_n(varo(10:11,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)   ;sea
+ ; varo2 = dim_sum_n(varo(4:5,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;soot+coarse
+  varo2 = varo(4,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext) ; soot
+  varo3 = dim_sum_n(varo(6:8,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)     ;dust
+  varo4 = dim_sum_n(varo(9:11,:,yloc-ext:yloc+ext,xloc-ext:xloc+ext),0)   ;sea
 
  ;PM2.5
   popt  = True
@@ -166,9 +169,9 @@ begin
 
   plot = new(4,"graphic")
   dum  = new(4,"graphic")
+  dum1  = new(4,"graphic")
 
-
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "Figure_vp_" + sprinti("%0.2i",nf) 
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -210,7 +213,7 @@ begin
  res@vpHeightF      = 0.7
 
  res@trXLog         = True
- res@trXMaxF        = 1.E4
+ res@trXMaxF        = 1.E5
  res@trXMinF        = 0.01
  res@trYMaxF        = 16.0 ;km
 
@@ -220,7 +223,7 @@ begin
  gsres@gsFillOpacityF    = 0.2
 
  do ip = 0, 3
- res@gsnLeftString = namemods(ip)
+ res@gsnLeftString = "" ;namemods(ip)
  if (ip.eq.3) then
    res@gsnLeftString = "  PM2.5"
    res@trXLog = False
@@ -234,15 +237,47 @@ begin
  end if
 
  plot(ip) = gsn_csm_xy(wks,edata(ip,:,:),height,res)
+ dres     = res
+ dres@xyLineColor = "lightpink3"
+ dum(ip)  = gsn_csm_xy(wks,edata(ip,:,:),height,dres)
+ dres@xyLineColor = "lightblue3"
+ dum1(ip)  = gsn_csm_xy(wks,edata(ip,:,:),height,dres)
 
  end do
 
- resP  = True
- resP@gsnPanelMainString = varo@time
- resP@gsnPanelDebug = True
- resP@gsnPanelXF = (/0.05,0.26,0.47,0.68/) + 0.02
+;;;HACK
+ overlay(plot(0),dum1(1))
+ overlay(plot(0),dum(2))
+ plot(1) = plot(3)
+;; HACK
 
- gsn_panel(wks,plot,(/1,4/), resP)
+ ;;LEGEND
+ ; Add legend
+ lgres                    = True
+ lgres@lgLineColors       = (/"black","lightblue3","lightpink"/)
+ lgres@lgLineThicknessF   = 3.
+ lgres@lgDashIndexes      = (/0,0,0/)
+ lgres@lgItemType         = "Lines"
+ lgres@lgLabelFontHeightF = fncps_hgt*8 ;10
+ lgres@vpWidthF           = 0.15 ;32
+ lgres@vpHeightF          = 0.20
+ lgres@lgPerimOn          = True ;
+ lgres@lgPerimFill        = "Solidfill"
+ lgres@lgPerimFillColor   = "white"
+ lbid = gsn_create_legend(wks,3,snamemods(0:2), lgres)
+
+ amres = True
+ amres@amParallelPosF   = 0.35
+ amres@amOrthogonalPosF = -0.35
+ annoid1 = gsn_add_annotation(plot(0),lbid,amres)
+
+ resP  = True
+ ;;CPS resP@gsnPanelMainString = varo@time
+ resP@gsnPanelDebug = True
+ ;;resP@gsnPanelXF = (/0.05,0.26,0.47,0.68/) + 0.02
+
+ ;resP@gsnPanelXF = (/0.084,0.38,0.67/)
+ gsn_panel(wks,plot(0:1),(/1,2/), resP)
 
 
 end

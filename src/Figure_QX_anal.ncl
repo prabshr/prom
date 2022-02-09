@@ -3,6 +3,9 @@
 ;Plots total hydrometeor, vertical velocity and wind vectors at "fpressure"
 ;      cross-section of hydrometeor, wind vectors and cold pool at "Ipangle"
 ;      vertical profile of hydrometor 
+; SB2M predicts number density (N [m-3]) and mass density (L [kg/m3])
+; COSMO model outputs specific number (n [kg-1]) and specific mass (q [kg/kg])
+; where n = N/rho  ; q = L/rho  , and rho is air density including all hydrometeors
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
@@ -46,8 +49,9 @@ begin
    fne     = 0 ;48
  else if (prom.eq.4) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   diri    = "/p/scratch/terrsysmp-art/"
-   fns     = 1
+   diri    = "/p/largedata/hbn33/shrestha1/"
+   pname   = "EMPAPROM1"
+   fns     = 32 
    fne     =  36 
    xlon = (/50.7, 51.1/)
    offs    = 0
@@ -80,7 +84,10 @@ begin
  hydro_dash       = (/0, 0, 1, 1, 1, 1/)
  hydro_thickness  = hydro_dash + 4.
 
- subevent    = itype_gscp + "/runE_" + inst + "_" + itype_gscp
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
 
@@ -95,13 +102,13 @@ begin
    scale_varh   = 1/1.E3
    qcnlevs      = (/1.1, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E7/)
    hydunits     = "L~S~-1~N~"
-   hydname      = "Number Concentration"
+   hydname      = "Number Density"
  else if (opt.eq.1) then
    hydrometeors = hydrometeors_qx
    scale_varh   = 1000.  ;kg/kg to g/kg
    qcnlevs      = (/0.01,0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0/)
    hydunits     = "g/m~S~3~N~"
-   hydname      = "Sp. Hydrometeor Content"
+   hydname      = "Mass Density"
  else if (opt.eq.2) then
    x3           = 1./3.
    hydrometeors = hydrometeors_qx
@@ -232,11 +239,11 @@ begin
    if (opt.eq.0) then
      varh(ih,:,:,:) = (/nc_cos->$(hydrometeors_qn(ih))$(0,::-1,:,:)/)
      varh(ih,:,:,:) = (/scale_varh * varh(ih,:,:,:) * rho/)    ;(kg-1) to (L-1)
-           ;Nt    = 1/1000. * Nd * rho            ; number density to number concentration
+           ;Nt    = 1/1000. * Nd * rho            ; specific number to number density 
    else if (opt.eq.1) then
      varh(ih,:,:,:) = (/nc_cos->$(hydrometeors_qx(ih))$(0,::-1,:,:)/)
      varh(ih,:,:,:) = (/scale_varh * varh(ih,:,:,:) * rho/)    ;(kg/kg) to (g/m3)
-           ;Qt    = 1000. * Qd * rho
+           ;Qt    = 1000. * Qd * rho              ; specific mass to mass density
    else if (opt.eq.2) then
      qtemp      = (/nc_cos->$(hydrometeors_qx(ih))$(0,::-1,:,:)/)
      Ntemp      = (/nc_cos->$(hydrometeors_qn(ih))$(0,::-1,:,:)/)
@@ -495,7 +502,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "qx_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_opt_" + opt + "_" + sprinti("%0.4i",fn) + "_" + ixp
   wks = gsn_open_wks(wks_type,fname_out)
 

@@ -20,14 +20,14 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "EMPAPROM2";
+  pname = "EMPA2_PROM1";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
 
-  ;nf          = 32
-  glon_idB    = 7.071663 ; Bonn Radar
+  nf          = 32
+  glon_idB    = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB    = 50.73052
 
 ;--------------------------------------------------------------------------------
@@ -35,8 +35,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
@@ -131,14 +131,15 @@ begin
   end do
 
  ;Extract sums
-  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
+  namemods   = (/"nuc./acc. (pure + mixed)", "soot", \
                  "dust", "PM2.5"/) ;"sea-salt"/)
 
  ;Extract sums for cropped region
   varo1 = dim_sum_n(varo(0:3,:,:,:),0)     ;nuc-acc mode ;small
-  varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,:,:),0)     ;dust
-;  varo4 = dim_sum_n(varo(10:11,:,:,:),0)   ;sea
+;  varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
+  varo2 = varo(4,:,:,:) ; soot
+  varo3 = dim_sum_n(varo(6:8,:,:,:),0)     ;dust
+;  varo4 = dim_sum_n(varo(9:11,:,:,:),0)   ;sea
 
  ;PM2.5
   popt  = True
@@ -206,7 +207,7 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("png", "Figure_art_rhi_"+nf)
+ wks      = gsn_open_wks("x11", "Figure_art_rhi_"+nf)
 
  cmap = read_colormap_file("ncl_default")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -338,13 +339,24 @@ begin
  res@tmYLLabelsOn  = False
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
  spol          = (/varh(tc,:,iys,:)/)   
-
+ if (fprocs) then
+  delete(res@cnLevels)
+  res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8., \
+                  10., 20., 40., 60., 80./)
+ end if
  plot(1)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 2
  res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
  spol          = (/varh(tc,:,iys,:)/)
+ if (fprocs) then
+  delete(res@cnLevels)
+  res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, 1.0/)
+ end if
  plot(2)  = gsn_csm_contour(wks,spol,res)
 
  ;

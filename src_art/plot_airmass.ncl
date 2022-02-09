@@ -12,7 +12,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- pname = "EMPAPROM2";
+ pname = "EMPA2_PROM1";
  inst  = 6
  lnd   = "HET"
  itype = "ART"
@@ -21,9 +21,9 @@ begin
  height  = 2000. ;4000. ; 2000. ; m
  colors  = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
  dashs   = (/0,0,0,0,0/)
-; nf      = 0 ;18+15    ;midnight+15 hrs
+ snf      = 33 ;18+15    ;midnight+15 hrs
  nbdl    = 20
- glon_idB    = 7.071663 ; Bonn Radar
+ glon_idB    = 7.071663 + 13*0.01 ; Bonn Radar
  glat_idB    = 50.73052
  ext         = (/0.45,0.6/)*1.0 ; 2.0   ;*1.2
 
@@ -33,8 +33,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -76,7 +76,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#2b Extract lognormal ASD for each mode
 ;-----------------------------------------------------------------------------------------
-  do nf = 32,32 ;dimsizes(fils_cos)-1
+  do nf = snf,snf ;dimsizes(fils_cos)-1
 
   fil_cos  = fils_cos(nf)
 
@@ -96,8 +96,8 @@ begin
  ;Extract sums at specific height
   varo1 = dim_sum_n(varo(0:3,:,:,:),0)     ;nuc-acc mode ;small
   varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,:,:),0)     ;dust
-  varo4 = dim_sum_n(varo(10:11,:,:,:),0)   ;sea
+  varo3 = dim_sum_n(varo(6:8,:,:,:),0)     ;dust
+  varo4 = dim_sum_n(varo(9:11,:,:,:),0)   ;sea
 
   varoz1 = wrf_user_intrp3d(varo1,Z,"h",height,0., False)
   varoz2 = wrf_user_intrp3d(varo2,Z,"h",height,0., False)
@@ -123,7 +123,7 @@ begin
 
   plot = new(4,"graphic")
 
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "Figure_airmass_" + sprinti("%0.2i",nf)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -141,7 +141,7 @@ begin
  res@gsnMaximize                = False
  res@gsnLeftStringFontHeightF   = fncps_hgt
  res@gsnRightStringFontHeightF  = fncps_hgt
- res@gsnLeftString              = "Nx (cm~S~-3~N~), Height: " + height + " m, " + varo@time
+ res@gsnLeftString              = "N~B~na~N~ (cm~S~-3~N~), Height: " + height + " m, " + varo@time
 
  res@tmXBLabelFont              = fncps_no
  res@tmYLLabelFont              = fncps_no

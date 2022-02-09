@@ -40,7 +40,7 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  prom=4   
- pname="PROM1";
+ pname="EMPA1_PROM1";
  inst=6
  readBPRO = False ;True    ;
  lnd = "HET"
@@ -65,8 +65,8 @@ begin
    dns     = 0 ;12 ; offset for dbz files
  else if (prom.eq.4) then
    diri    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705"
-   diri    = "/p/scratch/terrsysmp-art/"
-   fns     = 1 ;40 ;12
+   diri    = "/p/largedata/hbn33/shrestha1/"
+   fns     = 0 ;40 ;12
    fne     = 36; 48
    dns     = 0 ;12 ; offset for dbz files
  end if
@@ -104,16 +104,15 @@ begin
  pv_thickness  = pv_dash + 4.
 
  sfold       = "runE_" + inst + "_" + itype_gscp 
- subevent    = itype_gscp + "/" + sfold
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
  diri_cos    = diri + "/" + "/" + subevent + "/cosout/"
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
-
+ diri_emvo   = "/p/largedata/hbn33/test-emvo/" + pname + "/" + lnd + "/" + sfold
  dataFillVal    = -999        ;Polarimetric flags
-
- diri_dBz  = "/p/home/jusers/shrestha1/juwels/emvorado-offline/run_juwels/BoxPol-volscan.runE_6_HET2483_bonnRadar_20150705/runE_6_HET2483/"
- diri_emvo = diri_dBz 
 
 ;-----------------------------------------------------------------------------------------
 ;#2 Set variables to read and specify scales or offsets
@@ -549,6 +548,9 @@ begin
 ;------------------------------------------------------------------------------------------
 ;#11 Data Storage
 ;------------------------------------------------------------------------------------------
+  dataout = False
+  if (dataout) then
+
   if (fn.eq.fns) then
     latout = new((/nfils,tmp_dim(0),tmp_dim(1)/),"float")
     lonout = new((/nfils,tmp_dim(0),tmp_dim(1)/),"float")
@@ -577,6 +579,7 @@ begin
   Band6(fn-fns,0)   = glat_id(0)
   Band6(fn-fns,1)   = glon_id(0) 
 
+  end if
   print("Rain " + " " + sum(prec_c) + "  Hail " + sum(hail_c) + " mm")
  
 ;-----------------------------------------------------------------------------------------
@@ -1037,7 +1040,6 @@ begin
 ;---------------------------------------------------------------------------------------
 ;#14 Data Output 
 ;---------------------------------------------------------------------------------------
- dataout = False
  if (dataout) then
  fnamenc = itype_gscp + "_" + inst + ".nc"
  system("rm " + fnamenc)

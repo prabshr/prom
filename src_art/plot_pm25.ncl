@@ -7,18 +7,18 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "EMPAPROM2";
+  pname = "EMPA2_PROM1";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
 
   heights     = (/2000./) ;(/10., 2000., 4000., 7000./)
-  nf       = 32 ;18+15    ;midnighti + 15
+  snf       = 33 ;18+15    ;midnighti + 15
   sid      = 0     ;used INT2lM-MOZART with ldust = True
   ;;
-  thr_perc = 0.2   ;Threshold percentage to plot
-  glon_idB = 7.071663 ; Bonn Radar
+  thr_perc = 1.0  ;Threshold percentage to plot
+  glon_idB = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB = 50.73052
   nbdl     = 0
 
@@ -27,8 +27,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
 ;;--------------------------------------------------------------------------------
   ;Identify geo-location
@@ -45,7 +45,7 @@ begin
 ;--------------------------------------------------------------------------------
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
-  do nf = 32,32 ;0, dimsizes(fils_cos)-1 ;BIG LOOP
+  do nf = snf,snf ;0, dimsizes(fils_cos)-1 ;BIG LOOP
   fil_cos  = fils_cos(nf)
 
 ;Retrieve PM25
@@ -98,7 +98,7 @@ begin
      pcRes@gsMarkerSizeF   = 0.015;
      plot    = new(nlevs,"graphic")
      figname = "Figure_pm25_"+nf
-     wks     = gsn_open_wks("x11", figname)               ; send graphics to PNG file
+     wks     = gsn_open_wks("png", figname)               ; send graphics to PNG file
    end if
    pcRes@tiMainString    = "PM2.5 at " + heights(ip) + " m : " + pm25_str + " [" + pm25_v@units + "]"
    plot(ip)    = pie_chart(wks, percent_f, names_f, colors_f, pcRes)

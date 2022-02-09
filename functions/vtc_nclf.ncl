@@ -37,6 +37,6 @@ begin
 
   data2d = data2d / uscale 
   data2d@long_name = data3d@long_name
-  data2d@units     = uscale + "  molecules cm-2"
+  data2d@units     = uscale + "  molecules cm~S~-2~N~"
   return(data2d)
 end

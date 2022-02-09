@@ -1,13 +1,14 @@
 ;Plot aerosol size distribution for select modes
 ;opt@favg = True, returns spatial mean and standard deviation of each mode
 ; Data are ouput at specified heights in 4 different subplots
+; fprcs = REad from model or porcessed data
 load "$prom_root/functions/lndistART.ncl"
 
 begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "EMPAPROM2";
+  pname = "EMPA2_PROM1";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
@@ -17,17 +18,18 @@ begin
   ;heights     = (/2000.,4000./) ;
   colors      = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
   dashs       = (/0,0,0,0,0/)
-  ;nf          = 32
-  glon_idB    = 7.071663 ; Bonn Radar
+  nf          = 32
+  glon_idB    = 7.071663 + 13*0.01  ; Bonn Radar
   glat_idB    = 50.73052
-
+  aerofloor   = 1.E-30   ; m3 (minimum concentration)
+  fprcs       = False ;True
 ;--------------------------------------------------------------------------------
   itype_gscp  = lnd + itype
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
   fil_cos  = fils_cos(nf)
@@ -54,12 +56,15 @@ begin
   opt      = True
   opt@iy   = yloc 
   opt@ix   = xloc
-  opt@favg = False ;True  ;True
+  opt@favg = True  ;Returns average and std. deviation of each modes
   opt@fout = 0   ;Output ASD
   opt@nbdl = 20  ; Crop
+  opt@spread = False ; Plot the spread
 
   smodes = ispan(1,12,1) 
 
+
+ if (fprcs) then
 ;-----------------------------------------------------------------------------------------
 ;#2 Extract lognormal ASD for each mode 
 ;-----------------------------------------------------------------------------------------
@@ -70,6 +75,7 @@ begin
       temp = lndistART(fil_cos,opt)
       ndim = dimsizes(temp)
       nlDp = new((/12,ndim(0),ndim(1),ndim(2)/),"float")
+      units = temp@units
     end if
     nlDp(im,:,:,:) = lndistART(fil_cos,opt)
   end do
@@ -78,19 +84,31 @@ begin
   nchan = nlDp@dlnDp
 
   ;Extract average or location value of dN/dlog(Dp)p
-  nid = 0
+  ;Average is additive , E(X+Y) = E(X) + E(Y)
+
+  nid = 0   ;avg
   nlDp1     = dim_sum_n(nlDp(0:3,nid,:,:),0)    ;nuc-acc mode ;small
-  nlDp2     = dim_sum_n(nlDp(4:5,nid,:,:),0)    ;soot+coarse
-  nlDp3     = dim_sum_n(nlDp(6:9,nid,:,:),0)    ;dust
-  nlDp4     = dim_sum_n(nlDp(10:11,nid,:,:),0)  ;sea
+;  nlDp2     = dim_sum_n(nlDp(4:5,nid,:,:),0)    ;soot +coarse
+  nlDp2     = nlDp(4,nid,:,:)   ; soot only
+    nlDp2  =   where(nlDp2.eq.0, aerofloor ,nlDp2)  ;Remove zero values with minimum
+  nlDp3     = dim_sum_n(nlDp(6:8,nid,:,:),0)    ;dust
+    nlDp3  =   where(nlDp3.eq.0, aerofloor ,nlDp3)    ;Remove zero values with minimum
+  nlDp4     = dim_sum_n(nlDp(9:11,nid,:,:),0)  ;sea
 
   ;Extract standard deviation of dN/dlog(Dp)p
+  ;Std[X+y] = SQRT[VAR(X) + VAR)Y)] assuming X and Y are independent, 
+  ; but this might be a very strong assumption here !
+
   if (opt@favg) then
-    nid = 1 
-    snlDp1     = dim_sum_n(nlDp(0:3,nid,:,:),0)    ;nuc-acc mode ;small
-    snlDp2     = dim_sum_n(nlDp(4:5,nid,:,:),0)    ;soot+coarse
-    snlDp3     = dim_sum_n(nlDp(6:9,nid,:,:),0)    ;dust
-    snlDp4     = dim_sum_n(nlDp(10:11,nid,:,:),0)  ;sea
+    nid = 1   ;stddev
+ 
+    snlDp1     = sqrt((/nlDp(0,nid,:,:)^2 + nlDp(1,nid,:,:)^2 + nlDp(2,nid,:,:)^2 + nlDp(3,nid,:,:)^2/))    ;nuc-acc mode ;small
+    ;;snlDp2     = dim_sum_n(nlDp(4:5,nid,:,:),0)    ;soot+coarse
+    snlDp2     = nlDp(4,nid,:,:) ; soot
+      snlDp2  =   where(nlDp2.eq.0, 0 ,snlDp2)    ;Set s.d = 0
+    snlDp3     =  sqrt((/nlDp(6,nid,:,:)^2 + nlDp(7,nid,:,:)^2 + nlDp(8,nid,:,:)^2/))    ;dust
+      snlDp3  =   where(nlDp3.eq.0, 0 ,snlDp3)      ;Set s.d = 0
+    snlDp4     =  sqrt((/nlDp(9,nid,:,:)^2 + nlDp(10,nid,:,:)^2 + nlDp(11,nid,:,:)^2/))   ;sea
   end if
  
  ;Extract data at specific levels 
@@ -111,7 +129,49 @@ begin
     zsnlDp4       = transpose(snlDp4(:,izlevs))
   end if
 
-; Diagnostics Print
+  ;Debug Output
+  foutname = "asd_" + pname + "_ens" + inst + "_t" + nf + ".nc"
+  system("rm " + foutname)
+  fout = addfile(foutname,"c")
+  fout->Dp = (/Dp/)
+  fout->znlDp1 = (/znlDp1/)
+  fout->znlDp2 = (/znlDp2/)
+  fout->znlDp3 = (/znlDp3/)
+  fout->znlDp4 = (/znlDp4/)
+  if (opt@favg) then
+    fout->zsnlDp1 = (/zsnlDp1/)
+    fout->zsnlDp2 = (/zsnlDp2/)
+    fout->zsnlDp3 = (/zsnlDp3/)
+    fout->zsnlDp4 = (/zsnlDp4/)
+  end if
+  dummy = -999
+  dummy@units = units
+  dummy@nlevs = nlevs
+  dummy@nchan = nchan
+  fout->Band1 = dummy
+
+  delete(dummy)
+ else
+   foutname = "asd_" + pname + "_ens" + inst + "_t" + nf + ".nc"
+   fout = addfile("./data/" + foutname,"r")
+   Dp=fout->Dp
+   znlDp1=fout->znlDp1 
+   znlDp2=fout->znlDp2 
+   znlDp3=fout->znlDp3 
+   znlDp4=fout->znlDp4 
+   if (opt@favg) then
+     zsnlDp1=fout->zsnlDp1 
+     zsnlDp2=fout->zsnlDp2 
+     zsnlDp3=fout->zsnlDp3 
+     zsnlDp4=fout->zsnlDp4 
+   end if
+   dval  = fout->Band1
+   units = dval@units
+   nlevs = dval@nlevs
+   nchan = dval@nchan
+ end if    ;fprcs
+
+ ; Diagnostics Print
   N_cn1 = ceil(dim_sum_n(znlDp1,1)) *nchan
   N_cn2 = ceil(dim_sum_n(znlDp2,1)) *nchan
   N_cn3 = ceil(dim_sum_n(znlDp3,1)) *nchan
@@ -121,13 +181,13 @@ begin
   N_cn2 = decimalPlaces(N_cn2,2,True)
   N_cn3 = decimalPlaces(N_cn3,2,True)
   N_cn4 = decimalPlaces(N_cn4,2,True)
- 
-  legend1 = heights + " m : N_x = " + N_cn1 + " cm-3"
-  legend2 = heights + " m : N_x = " + N_cn2 + " cm-3"
-  legend3 = heights + " m : N_x = " + N_cn3 + " cm-3"
-  legend4 = heights + " m : N_x = " + N_cn4 + " cm-3"
 
-;  print(N_cn1 + " " + N_cn2 + " " + N_cn3 + " " + N_cn4) 
+  legend1 = heights + " m : N_x = " + N_cn1 + " " + units
+  legend2 = heights + " m : N_x = " + N_cn2 + " " + units
+  legend3 = heights + " m : N_x = " + N_cn3 + " " + units
+  legend4 = heights + " m : N_x = " + N_cn4 + " " + units
+
+;  print(N_cn1 + " " + N_cn2 + " " + N_cn3 + " " + N_cn4)
 
 ;-----------------------------------------------------------------------------------------
 ;#3 Plotting Resource
@@ -135,13 +195,13 @@ begin
 
   plot = new(4,"graphic")
 
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "Figure_ASD_" + nf + "_" + opt@nbdl ;+ sprinti("%0.2i",iz)
   wks = gsn_open_wks(wks_type,fname_out)
 
   fncps_no = ":F21:"
   fncps_no = 21
-  fncps_hgt = 0.02
+  fncps_hgt = 0.035
 
  res                            = True                 ; plot mods desired
  res@gsnDraw                    = False
@@ -172,25 +232,23 @@ begin
  res@xyDashPattern              = 0
  res@xyLineColors                = colors
  res@tiXAxisString              = "Dp [nm]"
- res@tiYAxisString             = "dN/dlnDp [cm-3]" 
+ res@tiYAxisString             = "dN/dlnDp [" + units + "]" 
 
- ;res@trYLog  = True
+ ;res@trXMinF = 1.   ;nm
+ res@trYMinF = 1.E-3;dN/dlogDp, cm-3 
+ res@trYMaxF = 1.E6 ;
 
- res@trXMinF = 1.
+ res@trYLog  = True
  res@trXLog = True
+ res@xyComputeXMin = True
 
- yscale = 1.4
- res@trYMaxF = max(znlDp1)*yscale
  res@gsnLeftString = "nuc./acc. (pure + mixed)"
  plot(0)  =  gsn_csm_xy (wks,Dp,znlDp1,res) ; create plot
- res@trYMaxF = max(znlDp2)*yscale
- res@gsnLeftString = "soot + coarse"
+ res@gsnLeftString = "soot" ; + coarse"
  plot(1)  =  gsn_csm_xy (wks,Dp,znlDp2,res)
- res@trYMaxF = max(znlDp3)*yscale
  res@gsnLeftString = "dust"
  plot(2)  =  gsn_csm_xy (wks,Dp,znlDp3,res)
 
- res@trYMaxF = max(znlDp4)*yscale
  res@gsnLeftString = "sea-salt"
  ;CPS plot(3)  =  gsn_csm_xy (wks,Dp,znlDp4,res)
 
@@ -200,31 +258,28 @@ begin
  lgres@lgLineThicknessF   = 3.
  lgres@lgDashIndexes      = dashs 
  lgres@lgItemType         = "Lines"
- lgres@lgLabelFontHeightF = fncps_hgt*10
- lgres@vpWidthF           = 0.32
- lgres@vpHeightF          = 0.15
+ lgres@lgLabelFontHeightF = fncps_hgt*17
+ lgres@vpWidthF           = 0.36
+ lgres@vpHeightF          = 0.20
  lgres@lgPerimOn          = False
  lbid1 = gsn_create_legend(wks,nlevs,legend1, lgres)
- lgres@vpWidthF           = 0.25
  lbid2 = gsn_create_legend(wks,nlevs,legend2, lgres)
- lgres@vpWidthF           = 0.32
  lbid3 = gsn_create_legend(wks,nlevs,legend3, lgres)
- lgres@vpWidthF           = 0.25
  lbid4 = gsn_create_legend(wks,nlevs,legend4, lgres)
 
  amres = True
- amres@amParallelPosF   = 0.2
- amres@amOrthogonalPosF = -0.25
+ amres@amParallelPosF   = 0.15
+ amres@amOrthogonalPosF = -0.35
  annoid1 = gsn_add_annotation(plot(0),lbid1,amres)
- amres@amParallelPosF   = 0.25
+ amres@amParallelPosF   = 0.15
  annoid2 = gsn_add_annotation(plot(1),lbid2,amres)
- amres@amParallelPosF   = -0.23
+ amres@amParallelPosF   = -0.15
  annoid3 = gsn_add_annotation(plot(2),lbid3,amres)
  amres@amParallelPosF   = -0.25
  ;CPS annoid4 = gsn_add_annotation(plot(3),lbid4,amres)
 
 
- if (opt@favg) then
+ if (opt@spread) then
    ng = 4*nlevs
    dummy = new(ng,"graphic")
    ictr=-1
@@ -233,20 +288,20 @@ begin
    xp = new((/2*nDp/),"float")
    yp = new((/2*nDp/),"float")
    if (ip.eq.0) then
-     znlDp = znlDp1
-     zsnlDp = zsnlDp1
+     znlDp = (/znlDp1/)
+     zsnlDp = (/zsnlDp1/)
    end if
    if (ip.eq.1) then
-     znlDp = znlDp2
-     zsnlDp = zsnlDp2
+     znlDp = (/znlDp2/)
+     zsnlDp = (/zsnlDp2/)
    end if
    if (ip.eq.2) then
-     znlDp = znlDp3
-     zsnlDp = zsnlDp3
+     znlDp = (/znlDp3/)
+     zsnlDp = (/zsnlDp3/)
    end if
    if (ip.eq.3) then
-     znlDp = znlDp4
-     zsnlDp = zsnlDp4
+     znlDp = (/znlDp4/)
+     zsnlDp = (/zsnlDp4/)
    end if 
    do iz = 0, nlevs - 1
    ictr = ictr + 1
@@ -256,6 +311,8 @@ begin
      xp(2*nDp-1-k)  = Dp(k)
      yp(2*nDp-1-k)  = znlDp(iz,k) - zsnlDp(iz,k) 
    end do 
+   print(min(xp) + " " + max(xp) + " " + min(yp) + " " + max(yp))
+
    gsres                   = True                        ; poly res
 
    gsres@tfPolyDrawOrder   = "Predraw"                   ; draw this first
@@ -267,7 +324,7 @@ begin
  end if
 
  resP  = True
- resP@gsnPanelMainString = nlDp@time 
+ ;resP@gsnPanelMainString = nlDp@time 
  gsn_panel(wks,plot,(/2,2/), resP)
 
 

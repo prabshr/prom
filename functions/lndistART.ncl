@@ -286,22 +286,26 @@ begin
  
   ;Reverse COSMO vertical levels
   rnlDp = rnlDp(:,:,::-1)
+  rnlDp@units = "cm~S~-3~N~"
   return(rnlDp)
 
   else if (oup.eq.1) then
     ndim   = dimsizes(N_i(0,:,:,:))
     Ncm3   = N_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)/1.E6    ;cm-3
     Ncm3@time = date_str
+    Ncm3@units = "cm~S~-3~N~"
     return(Ncm3)   ;cm-3
   else if (oup.eq.2) then
     ndim   = dimsizes(M_i(0,:,:,:))
     Mkg    = M_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1000.   ;m3/m3
     Mkg@time = date_str
+    Mkg@units = "m~S~3~N~/m~S~3~N~"
     return(Mkg)
   else if (oup.eq.3) then
     ndim   = dimsizes(Dpd_i(0,:,:,:))
     Dpd    = Dpd_i(0,::-1,nbdl:ndim(1)-nbdl-1,nbdl:ndim(2)-nbdl-1)*1.E9  ;nm
     Dpd@time = date_str
+    Dpd@units = "nm"
     return(Dpd)    ;nm
   else
     print("Error ... check opt@fout=0-3")

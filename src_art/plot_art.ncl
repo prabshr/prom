@@ -13,17 +13,20 @@ begin
 
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------
- pid       = 0
- ydates    = (/"20150705","20160513","20170706"/)
- lndcov    = (/"HET","HET","HET"/)
- insts     = (/6, 8, 11/)
- fns       = (/5,34,18/) 
- ixs       = (/93,124,95/) + 65  ;Need to add offset due to clipping of radar
- ;ixs       = (/60,124,95/) + 65 ;Stack emission
- nbdl      = 30    ;Cropping data extent
+
+ pname = "EMPA2_PROM1";
+ inst  = 6
+ lnd   = "HET"
+ itype = "ART"
+ diri  = "/p/largedata/hbn33/shrestha1/"
+
+ fns   = 6 
+ fne   =fns 
+ ixs   = 93 + 65
+ nbdl  = 30    ;Cropping data extent
 
 ;Tracer
- varnames = (/"NO2","HCHO", "VSOILA0", "TAU_AERO_A"/)
+ varnames = (/"NO2","HCHO", "VSOILA0", "TAU"/)
  fvtcs    = (/True,  False, False, False/)
  htrops   = (/10000.0,-999,-999, -999/)  ;Tropospheric height -midlatitudes [m]
  uscales  = (/1E15,2.69E16,1.,1./) ; ; Dobson Units
@@ -40,13 +43,6 @@ begin
  shp_fil   = "/daten01/z4/database/TestCases/bonnRadar/shape_map/vect_map.shp"
  fcountry  = False
 
-
- diri      = "/p/largedata/hbn33/shrestha1/"
-; diri      = "/daten04/pshrestha/shared-data/"
-
- diri_cos  = diri + "HET_ART_"+ydates(pid)+"/runART_" + insts(pid) +"_" +lndcov(pid)+"/cosout/"
- diri_cosI = diri_cos + "/ivr/"
-
  ;Bonn Radar
  lonc        = 7.071663; N
  latc        = 50.73052; E
@@ -57,6 +53,14 @@ begin
 
 ; Read Variables
 ;-----------------------------------------------------------------------
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+ diri_cos    = diri + "/" + subevent + "/a_cosout/"
+ diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
+
+
  fil_ivr    = diri_cosI + "lfff00000000c.nc"
  nc_cosI    = addfile(fil_ivr,"r")
  lon2d      = nc_cosI->lon
@@ -82,9 +86,7 @@ begin
  
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
 
- fn        = fns(pid)
-
- do fn = 0,36    ;BIG LOOP for animation
+ do fn = fns,fne    ;BIG LOOP for animation
 
  nc_cos    = addfile(fils_cos(fn),"r")
  time      = nc_cos->time
@@ -104,17 +106,21 @@ begin
 
  else 
 
-   tracer3d = nc_cos->$varname$(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
-   ;tracer   = dim_sum_n(tracer3d,0) 
-   tracer = (tracer3d(0,:,:)) ;/1.E6 ; dust concentraion cm-3
+   if (varname.eq."TAU") then
+     tracer3d = nc_cos->TAU_AERO_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1) + \
+                nc_cos->TAU_DUST_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1) + \
+                nc_cos->TAU_SEAS_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+     tracer   = dim_sum_n(tracer3d,0)
+     tracer@long_name = "AOD at 550 nm"
+     tracer@units     = "-"
+   else
+     tracer3d = nc_cos->$varname$(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+     tracer   = (tracer3d(0,:,:))/1.E6 ; surface concentraion cm-3
+     tracer3d@units = "cm~S~-3~N~"
+   end if
 
    copy_VarAtts(tracer3d,tracer)
-   ;tracer@long_name = varname
-   ;tracer@units = "-"
-;   tracer = dim_avg_n(tracer3d(0:20,:,:),0) *1000.
-;   tracer@long_name = varname
-;   tracer@units = "ppbv"
-  ;tracer = extract_atmwater_nclf(fils_cos(fn),fil_ivr,nbdl,opt)
+   ;tracer = extract_atmwater_nclf(fils_cos(fn),fil_ivr,nbdl,opt)
    ;Geo-reference
    tracer@lat2d = lat2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
    tracer@lon2d = lon2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
@@ -159,7 +165,7 @@ begin
  txfnColor  = "black"
 
  wks_type   = "x11"
- wks        = gsn_open_wks(wks_type,"Figure_" +varname+"_"+sprinti("%0.2i",fn))
+ wks        = gsn_open_wks(wks_type,"Figure_" +varname+"_I" + inst + "_" + sprinti("%0.2i",fn))
 
  res = True
 
@@ -169,7 +175,12 @@ begin
  res@gsnFrame                   = False
  res@gsnAddCyclic               = False
  res@gsnLeftString              = str_time
+ if (tracer@long_name.eq."NO2") then
+   tracer@long_name = "NO~B~2~N~"
+ end if
  res@gsnRightString             = tracer@long_name + " [" + tracer@units + "]" 
+ res@gsnRightStringFontHeightF= fncps_hgt
+ res@gsnLeftStringFontHeightF = fncps_hgt
 
  ;vp Resources
  ;-----------------------
@@ -281,9 +292,14 @@ begin
  cres@cnInfoLabelFontColor    = "grey"
  if (vid.eq.0) then
    cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
+
+ else if (vid.eq.3) then
+   cres@cnLevels                = ispan(1,10,1)*0.1
  else
    cres@cnLevels                = fspan(vmin,vmax,10) ;ispan(1,10,1)*0.1  ;fspan(vmin,vmax,20)
  end if
+ end if
+
  cres@gsnRightString          = ""
  dum_tracer  = gsn_csm_contour(wks,tracer,cres)
  overlay(plot,dum_tracer)
@@ -379,8 +395,8 @@ begin
  ppres@gsLineColor        = "gray3"
  ppres@gsLineDashPattern  = 3
  ppres@gsLineThicknessF   = 1.0
- xx   = (/lon2d(0,ixs(pid)),lon2d(ny-1,ixs(pid))/)
- yy   = (/lat2d(0,ixs(pid)),lat2d(ny-1,ixs(pid))/)
+ xx   = (/lon2d(0,ixs),lon2d(ny-1,ixs)/)
+ yy   = (/lat2d(0,ixs),lat2d(ny-1,ixs)/)
  ;csAA = gsn_add_polyline(wks,plot,xx,yy,ppres)
 
  if (vid.eq.3) then
@@ -402,6 +418,20 @@ begin
    lab2 = gsn_add_text(wks,plot,stname,mloc(1),mloc(0)+0.1,tres)
  end if
  ;
+ ;Bonn Radar Extent
+;-----------------------------------------------------------------------
+ ncirc    = 100
+ circ_lat = new(ncirc,float)               ; Create arrays to hold circle.
+ circ_lon = new(ncirc,float)
+
+ nggcog(latc,lonc,0.91,circ_lat,circ_lon)
+
+ ;print(circ_lat + " " + circ_lon)
+ lnres = True
+ lnres@gsLineColor      = "Brown"
+ lnres@gsLineThicknessF = 6.0
+ line_id = gsn_add_polyline(wks, plot, circ_lon, circ_lat, lnres)
+
  draw(plot)
  frame(wks)
  delete([/res,cres/])

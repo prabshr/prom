@@ -20,7 +20,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "PROM1";
+  pname = "EMPA2_PROM1";
   einst = (/5,6,7,8,9/)
   lnd   = "HET"
   itype = "ART"
@@ -30,11 +30,12 @@ begin
   dashs       = (/0,0,0,0,0/)
   nbdl        = 0   ;Always 0 in this code, for iy,ix reference
   height      = 2000 ;m a.msl
-  glon_idB    = 7.071663 ; Bonn Radar
+  glon_idB    = 7.071663 + 13*0.01  ; Bonn Radar
   glat_idB    = 50.73052
   fprcs       = False ;True ; Process or read processed data
   namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
                  "dust", "sea-salt"/)
+
 ;--------------------------------------------------------------------------------
 
   if (fprcs) then       ;Process data extraction
@@ -42,12 +43,12 @@ begin
   do ens = 0, dimsizes(einst)-1    ;ENSEMBLE LOOP
 
   itype_gscp  = lnd + itype
-  sfold       = "runE_" + inst + "_" + itype_gscp
+  sfold       = "runE_" + einst(ens) + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
 
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -111,8 +112,8 @@ begin
  ;Extract sums at specific height
   varo1 = dim_sum_n(varo(0:3,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;nuc-acc mode ;small
   varo2 = dim_sum_n(varo(4:5,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;dust
-  varo4 = dim_sum_n(varo(10:11,:,yloc-4:yloc+4,xloc-4:xloc+4),0)   ;sea
+  varo3 = dim_sum_n(varo(6:8,:,yloc-4:yloc+4,xloc-4:xloc+4),0)     ;dust
+  varo4 = dim_sum_n(varo(9:11,:,yloc-4:yloc+4,xloc-4:xloc+4),0)   ;sea
 
   varoz1 = wrf_user_intrp3d(varo1,Z,"h",height,0., False)
   varoz2 = wrf_user_intrp3d(varo2,Z,"h",height,0., False)
@@ -140,21 +141,21 @@ begin
   esdata(:,ens,:) = sdata
   end do      ;ENSEMBLE LOOP
 
-  foutname = "art-diurnal-profile_" + height+".nc"
+  foutname = "art-diurnal-profile_" + pname + "_" + height+".nc"
   system("rm " + foutname)
   fout = addfile(foutname,"c")
   fout->Band1 = (/edata/)
   fout->Band2 = (/esdata/)
 
   else
-    foutname = "art-diurnal-profile_" + height+".nc"
+    foutname = "art-diurnal-profile_" + pname + "_" + height+".nc"
     fout = addfile("./data/" + foutname,"r")
     edata = fout->Band1 
    esdata = fout->Band2 
     ndim  = dimsizes(edata)
    nf_cos = ndim(2)
-   time   = ispan(0,nf_cos-1,1) + 6
-   time@units = "hours since 2015-07-04 00:00:00" 
+   time   = ispan(0,nf_cos-1,1) 
+   time@units = "hours since 2015-07-04 06:00:00" 
   end if ;fprcs = True
 
 ;-----------------------------------------------------------------------------------------
@@ -176,11 +177,10 @@ begin
  res                            = True                 ; plot mods desired
  res@gsnDraw                    = False
  res@gsnFrame                   = False
- res@gsnRightString             = ""
  res@gsnMaximize                = False
  res@gsnLeftStringFontHeightF   = fncps_hgt
  res@gsnRightStringFontHeightF  = fncps_hgt
- res@gsnLeftString              = "" ;Z(iz) + " m"
+ res@gsnRightString              = "Height: " + height + " m"
 
  res@tmXBLabelFont              = fncps_no
  res@tmYLLabelFont              = fncps_no
@@ -192,6 +192,8 @@ begin
  res@tmYLLabelFontColor         = "black"
  res@tmXBLabelFontThicknessF    = 2.0
  res@tmYLLabelFontThicknessF    = 2.0
+
+ lres = res
 
  res@tiXAxisFont                = fncps_no
  res@tiYAxisFont                = fncps_no
@@ -205,12 +207,13 @@ begin
  res@xyLineColor                = "gray"
  res@tiXAxisString              = "Time (UTC)"
 
- res@vpWidthF       = 0.65
+ res@vpWidthF       = 0.8
  res@vpHeightF      = 0.4
+ res@vpXF           = 0.13
 
- ;res@trYLog         = True
+ res@trYLog         = True
  res@trYMaxF        = 3500.
- res@trYMinF        = 0
+ res@trYMinF        = 10 
  ;res@trXMaX
 
  gsres                   = True                        ; poly res
@@ -233,16 +236,37 @@ begin
                        (/2015,7,5,18,0,0/), \
                        (/2015,7,6,0,0,0/)/)
 
- do ip = 0, 0 ;3
+ delete(restick@ttmValues)
+ do ip = 0, 3
    res@gsnLeftString = namemods(ip)
-   res@tiYAxisString = "N [cm~S~-3~N~]"
+   res@tiYAxisString = "N~B~na~N~ [cm~S~-3~N~]"
    time_axis_labels(time,res,restick)
    plot(ip) = gsn_csm_xy(wks,time,edata(ip,:,:),res)
 
  end do
 
- draw(plot)
+ ip = 0
+ ; Draw line
+ lres@gsnRightString =""
+ nt  = 32
+ xx  = (/time(nt),time(nt)/)
+ yy  = (/res@trYMinF, res@trYMaxF/)
+ lres@xyLineColor = "blue"
+ lres@xyLineThicknessF = 2.
+ duml1 = gsn_csm_xy(wks,xx,yy,lres)
+ overlay(plot(ip),duml1)
+
+ nt  = 33
+ xx  = (/time(nt),time(nt)/)
+ yy  = (/res@trYMinF, res@trYMaxF/)
+ lres@xyLineColor = "red"
+ lres@xyLineThicknessF = 2.
+ duml1 = gsn_csm_xy(wks,xx,yy,lres)
+ overlay(plot(ip),duml1)
+
+ draw(plot(ip))
  frame(wks)
+
  ;resP  = True
  ;resP@gsnPanelMainString = "Height = " + height + " m a. msl" ;nlDp@time 
  ;gsn_panel(wks,plot,(/2,2/), resP)

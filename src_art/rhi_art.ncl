@@ -20,14 +20,14 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
-  pname = "EMPAPROM2";
+  pname = "EMPA2_PROM1";
   inst  = 6
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
 
-  ;nf          = 32
-  glon_idB    = 7.071663 ; Bonn Radar
+  nf          = 32
+  glon_idB    = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB    = 50.73052
 
  ;--------------------------------------------------------------------------------
@@ -35,8 +35,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/cosout/"
-  diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ begin
  ;
  nm     = getind_latlon2d (lat,lon, glat_idB, glon_idB)
  iys    = nm(0,0)
- ixs    = nm(0,1)
+ ixs    = nm(0,1) 
 
 
 ;STEP 4 Prognostic state variables
@@ -131,14 +131,17 @@ begin
   end do
 
  ;Extract sums
-  namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
+  namemods   = (/"nuc./acc. (pure + mixed)", "soot", \
                  "dust", "PM2.5"/) ;"sea-salt"/)
+  namemods   = (/"N~B~na~N~", "N~B~soot~N~","N~B~dust~N~","PM2.5"/)
+  hydunits   = (/"cm~S~-3~N~","cm~S~-3~N~","cm~S~-3~N~","~F8~m~F21~g~N~m~S~-3~N~"/)
 
  ;Extract sums for cropped region
   varo1 = dim_sum_n(varo(0:3,:,:,:),0)     ;nuc-acc mode ;small
-  varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
-  varo3 = dim_sum_n(varo(6:9,:,:,:),0)     ;dust
-;  varo4 = dim_sum_n(varo(10:11,:,:,:),0)   ;sea
+;  varo2 = dim_sum_n(varo(4:5,:,:,:),0)     ;soot+coarse
+  varo2 = varo(4,:,:,:)    ;soot
+  varo3 = dim_sum_n(varo(6:8,:,:,:),0)     ;dust
+;  varo4 = dim_sum_n(varo(9:11,:,:,:),0)   ;sea
 
  ;PM2.5
   popt  = True
@@ -206,7 +209,7 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_art_rhi_"+nf)
+ wks      = gsn_open_wks("png", "Figure_art_rhi_"+nf)
 
  cmap = read_colormap_file("ncl_default")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -255,6 +258,7 @@ begin
  ;
  res@lbOrientation = "Vertical"
  res@vpWidthF = 0.4
+ res@vpHeightF = 0.55
 
  ;tr resources
  ;--------------------
@@ -301,9 +305,12 @@ begin
  reso@cnInfoLabelOn             = False
  reso@cnLevelSelectionMode       = "ExplicitLevels"
  reso@cnLevels = (/0./)
- reso@tmXBLabelsOn  = True
+ reso@tmXBLabelsOn  = False ;True
  reso@cnLineLabelFontHeightF = 0.02
  reso@cnLineThicknessF = 3.
+ reso@tiXAxisString =""
+ reso@tiYAxisString = ""
+
  do ic = 0,3
    dumt(ic)     = gsn_csm_contour(wks,tairC,reso)
  end do
@@ -313,6 +320,7 @@ begin
  resu@tmXBLabelsOn  = False
 
  resu@tiYAxisString = ""
+ resu@tiXAxisString = ""
  resu@vcRefAnnoFontHeightF     = 0.01
  resu@vcRefMagnitudeF          = 30.            ; define vector ref mag
  resu@vcRefLengthF             = 0.045            ; define length of vec ref
@@ -328,28 +336,44 @@ begin
 
  ;
  tc = 0
- res@gsnRightString = tracers(tc) ;+ " [" + hydunits + "]" 
+ res@gsnRightString = tracers(tc) + " [" + hydunits(tc) + "]" 
  spol          = (/varh(tc,:,:,ixs)/)  
+ res@tiXAxisString = " "
+ res@tmXBLabelsOn  = False
  plot(0)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 1
  res@tiYAxisString = ""
  res@tmYLLabelsOn  = False
- res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
+ res@gsnRightString = tracers(tc)  + " [" + hydunits(tc) + "]"
  spol          = (/varh(tc,:,:,ixs)/)   
-
+ if (fprocs) then
+  delete(res@cnLevels)
+  res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8., \
+                  10., 20., 40., 60., 80./)
+ end if
  plot(1)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 2
- res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
+ res@gsnRightString = tracers(tc)  + " [" + hydunits(tc) + "]"
  spol          = (/varh(tc,:,:,ixs)/)
+ if (fprocs) then
+  delete(res@cnLevels)
+  res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, 1.0/)
+ end if
+ res@tmXBLabelsOn  = True
+ res@tiXAxisString = "Latitude [~F34~0~F~N]"
+ res@tiYAxisString = "Height [km]"
  plot(2)  = gsn_csm_contour(wks,spol,res)
 
  ;
  tc = 3
- res@gsnRightString = tracers(tc) ; + " [" + hydunits + "]"
+ res@gsnRightString = tracers(tc)  + " [" + hydunits(tc) + "]"
  spol          = (/varh(tc,:,:,ixs)/)
  if (fprocs) then
   delete(res@cnLevels)
@@ -357,6 +381,7 @@ begin
   cnlev(0) = 0.1
   res@cnLevels = cnlev
  end if
+ res@tiYAxisString = ""
  plot(3)  = gsn_csm_contour(wks,spol,res) 
 
 
@@ -379,8 +404,8 @@ begin
  ;Draw Panel
  resP = True
  resP@gsnMaximize    = True
- ;resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
- ;resP@gsnPanelDebug = True
- resP@gsnPanelMainString = str_time
+ resP@gsnPanelYF = (/-1,-1,0.47,.47/)  ;for 4 columns
+ resP@gsnPanelDebug = True
+ ;CPS resP@gsnPanelMainString = str_time
  gsn_panel(wks,plot,(/2,2/), resP)
 end
