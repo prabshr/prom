@@ -3,6 +3,7 @@
 ;This algorithm works in 2 step iterative fashion
 ;1) Run the script with fopt  = False  (step = 0) , it will create an output with edges
 ;4) Run the script again with fopt = True (step = 1)
+; Added debug mode , step=2 st=X, jy=X ix=X
 ;
 ;Functions Used:
 ; convol
@@ -11,6 +12,7 @@
 ; Usage:
 ; ncl edgeDetetction.ncl step=0
 ; ncl edgeDetetction.ncl step=1 (needs the storm location, cell*txt file) 
+; ncl edgeDetetction.ncl step=2 (needs spatiotemporal co-ordinate)
 ; Edit in MAIN code
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl" 
@@ -347,16 +349,19 @@ end
 begin
   ;User Settings
   ;----------------------------------------------------------------------
-  pid       = 0            ;Experiment ID
-  expname   = "HETART"    ;Perturbation ID
+  pid       = 3            ;Experiment ID
+  lnd       = "HET"
+  itype     = "ART"
   ;inst     = 8
-
   ;bopt = False
   ;bopt@bdr = False
-  pnames    = (/"ARTPROM1","PROM2","PROM3"/)
+  pnames    = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
+
   ;Pre-processing
   ;----------------------------------------------------------------------
-  fname    = pnames(pid) + "_runE_" + inst + "_" + expname  
+  itype_gscp = lnd + itype
+
+  fname    = pnames(pid) + "_runE_" + inst + "_" + itype_gscp
   nc_radar = addfile(fname+".nc","r")
 
   if (step.eq.0) then
@@ -369,9 +374,19 @@ begin
     seind = ind(jd.ne.-999)
     st = seind(0)                   ;start time for storm tracking
     et = seind(dimsizes(seind)-1)   ;end time for storm tracking
+  else if (step.eq.2)
+    fopt = True
+    print("Debugging mode")
+    print("Time index = "+st + " " + jy + " " +ix)
+    jd = new(st+1,"integer")
+    id = new(st+1,"integer")
+    jd(st) = jy
+    id(st) = ix
+    et = st
   else
     print("Code not written for step = " + step)
     exit
+  end if
   end if
   end if
 
@@ -429,5 +444,9 @@ begin
   ;Output of Processed data
   system("rm " + fname_out)
   fout = addfile(fname_out,"c")
-  fout->Band1 = zh
+  if (step.eq.2) then
+    fout->Band1 = zh(st,:,:)
+  else
+    fout->Band1 = zh
+  end if
 end

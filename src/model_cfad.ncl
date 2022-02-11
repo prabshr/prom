@@ -49,26 +49,35 @@ end
 begin
 
  ;User Settings ---------------------------------------------------------------
- pid         = 0
+ pid         = 3 
  lnd         = "HET"
- itype       = "2583"
+ itype       = "ART"
  inst        = 6 
  opt         = True
- wks_type     = "png"
+ wks_type     = "x11"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
- pnames      = (/"PROM1","PROM2","PROM3"/)
+ pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
  pvars     = (/"Z~B~H~N~","Z~B~DR~N~","K~B~DP~N~","~F8~r~B~~F10~hv~E~"/)
  punits    = (/"[dBZ]","[dB]","[deg/km]", "[-]"/)
 ;;;
  npol        = dimsizes(pvars)
- casename    = casenames(pid)
+ ;casename    = casenames(pid)
  pname       = pnames(pid)
- expname     = lnd + itype
- sfold       = "runE_" + inst + "_" + expname
- diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+ ;CLUMA2
+ ;diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
+ 
+ ;JUWELS
+ diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent 
+ diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
+ diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent 
 
 ;Read netcdf files
 ;---------------------------------------------------------------------------
@@ -105,10 +114,6 @@ begin
    ymat  = conform_dims((/ny,nx/),y,0)
 
   ;BIG LOOP
-  st = 12
-  et = 24
-  print("Manually changing st and et " + st + " " + et)
-  print(" ********* ")
 
   ntime        = et - st + 1
   varh         = new((/ntime,npol,nz,ny,nx/),"float") 

@@ -9,12 +9,9 @@ function data_extract(diri,opt)
   begin
   print("Extracting "  + diri)
   if (opt@ver.eq.1) then
-    fname  = diri + "/CAF_" + opt@lnd + opt@itype + "_" + opt@nf + ".nc"
-  else if (opt@art.eq.1) then
-    fname = diri + "/CAF_ARTPROM1_runE_" + opt@nf + "_" + opt@lnd + opt@itype + ".nc"
+    fname  = diri + "/CAF_" + opt@lnd + opt@itype + "_" + opt@inst + ".nc"
   else
-    fname = diri + "/CAF_PROM1_runE_" + opt@nf + "_" + opt@lnd + opt@itype + ".nc"
-  end if
+    fname = diri + "/CAF_" + opt@pname + "_runE_" + opt@inst + "_" + opt@lnd + opt@itype + ".nc"
   end if
   nc_fil = addfile(fname,"r")
     ;print(nf + " " + fname)
@@ -29,45 +26,48 @@ end
 
 begin
   diri1 = "$PROM/scratch/data_prom1/"
-  diri2 = "$PROM/scratch/data_v2/"
+  diri2 = "$PROM/scratch/CAF/"
  
   ; Read processed synthetic data PROM1,2,3, st= start times, 14, 9.59, 11 UTC, nt = 5 min interval
   opt = True
-  opt@nf = 6      ;ens no
+  opt@inst = 6      ;ens no
   opt@nt   = 5    ;data interval , mins
   opt@sthr = 14   ;start hour
   opt@lnd  = "HET"
-  opt@itype = "2483"
-  opt@art = 0
+  opt@itype = "ART"
+  opt@pname = "EMPA2_PROM1"
 
   opt@ver = 2 
   temp = data_extract(diri2 ,opt)
   ndim = dimsizes(temp)
 
-  itypes = (/2483,2463,2493,2583,2563,2593,2683,2663,2693/) ;, \
-            ;  2483,2463,2493,2583,2563,2593,2663,2663, \
-            ;  2483,2463,2493,2583,2563,2593,2663,2693/)
-  colors = (/"red","red","red","red","red","red","red","red","red"/) ;, \
-             ;    "blue","blue","blue","blue","blue","blue","blue","blue","blue", \
-             ;    "green","green","green","green","green","green","green","green","green"/)
+;  itypes = (/2483,2463,2493,2583,2563,2593,2683,2663,2693/) ;, \
+;            ;  2483,2463,2493,2583,2563,2593,2663,2663, \
+;            ;  2483,2463,2493,2583,2563,2593,2663,2693/)
+;  colors = (/"red","red","red","red","red","red","red","red","red"/) ;, \
+;             ;    "blue","blue","blue","blue","blue","blue","blue","blue","blue", \
+;             ;    "green","green","green","green","green","green","green","green","green"/)
   colors = (/"orchid3","yellow3","grey20","orchid3","yellow3","grey20","orchid3","yellow3","grey20"/)
-
-  dpats  = (/0,0,0,0,0,0,0,0,0/) ;, \
-            ; 0,0,0,0,0,0,0,0,0, \
-            ; 0,0,0,0,0,0,0,0,0/)
+;
+;  dpats  = (/0,0,0,0,0,0,0,0,0/) ;, \
+;            ; 0,0,0,0,0,0,0,0,0, \
+;            ; 0,0,0,0,0,0,0,0,0/)
   dpats  = (/0,0,0,2,2,2,3,3,3/)
-  lnds   = (/"HET","HET","HET","HET","HET","HET","HET","HET","HET"/) ;, \
-            ;   "RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD", \
-             ;     "EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD"/)
+;  lnds   = (/"HET","HET","HET","HET","HET","HET","HET","HET","HET"/) ;, \
+;            ;   "RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD", \
+;             ;     "EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD"/)
+;
 
+   einst = (/5,6,7,8,9/)
 
-
-  nprf  = dimsizes(itypes)
+;  nprf  = dimsizes(itypes)
+  nprf = dimsizes(einst) 
   data = new((/nprf,ndim/),"float")
 
   do ip = 0, nprf-1
-    opt@itype = itypes(ip)
-    opt@lnd = lnds(ip)
+   ; opt@itype = itypes(ip)
+   ; opt@lnd = lnds(ip)
+    opt@inst = einst(ip)
     data(ip,:) = data_extract(diri2 ,opt)
   end do
   ;opt@ver = 1
@@ -89,6 +89,7 @@ begin
   res@tiYAxisString              = "Convective Area Fraction [-]"
   res@tiXAxisString              = "Time (UTC)"
 
+  res@trXMaxF  = 16.5
   res@vpWidthF = 0.7
 ;PROM1 ------------
   plot                        = gsn_csm_xy (wks,data&time,data,res) ; create plot

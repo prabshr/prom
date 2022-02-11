@@ -27,12 +27,14 @@ begin
 ;-----------------------------------------------------------------------------------------
  fplot       = True
  inset       = False
- nfils       = 19
+ nfs = 5 ;0
+ nfe = 9 ;19
  plotRADOLAN = True ;False
  diriR       = "/daten01/z4/database/radola/"  ;RADOLAN data
+ diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_empa2_prom1/" 
  fstat       = 1
- diri        = "./data_prom" + expid
- prefx       = "accprecip_HET2483"
+ diri        = "./data_empa2_prom" + expid
+ prefx       = "accprecip_HETART"
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -47,10 +49,10 @@ begin
  end if
  end if
 
- do nf  = 0, nfils-1                   ;EPS Loop
+ do nf  = nfs,nfe ;0, nfils-1                   ;EPS Loop
    fname      = diri + "/" + prefx+ "_"+nf+".nc"
    fout       = addfile(fname,"r")
-   if (nf.eq.0) then
+   if (nf.eq.nfs) then
      fgeo       = addfile(diri + "/georain.nc","r")
      topo       = (/fgeo->topo/)
      lat2d      = fgeo->lat2d
@@ -58,11 +60,11 @@ begin
      ndim       = dimsizes(topo)
      ny         = ndim(0)
      nx         = ndim(1)
-     nt         = nfils
+     nt         = nfe-nfs+1 ;nfils
      pvar2d     = new((/nt,ny,nx/),"float")
    end if
-   pvar2d(nf,:,:) = (/fout->ACCRAIN/)
-   print(nf + " " + fname + " " + avg(pvar2d(nf,:,:)) + " " + stddev(pvar2d(nf,:,:)) )
+   pvar2d(nf-nfs,:,:) = (/fout->ACCRAIN/)
+   print(nf + " " + fname + " " + avg(pvar2d(nf-nfs,:,:)) + " " + stddev(pvar2d(nf-nfs,:,:)) )
 
  end do
 
@@ -70,7 +72,8 @@ begin
  print(avg(pvar2d) + " " + stddev(pvar2d) )
 
  if (plotRADOLAN) then
-   foutname = diriR +  "/accprecip_prom"+expid +"_RADOLAN_0.nc"
+   ;foutname = diriR +  "/accprecip_prom"+expid +"_RADOLAN_0.nc"
+   foutname = diriR +  "/accprecip_RADOLAN_0.nc"
    fout = addfile(foutname,"r")
    pvar1 = (/fout->ACCRAIN/)
    pvar1@lat2d = lat2d
@@ -79,7 +82,7 @@ begin
  end if
 
  if (fstat.eq.1) then
-   pvar          = dim_avg_n(pvar2d(4:7,:,:),0)
+   pvar          = dim_avg_n(pvar2d(0:nfe-nfs,:,:),0)
    pvar@long_name = "Model" ;Ensemble Averaged Acc. Precip."
    pvar1@long_name = "RADOLAN"
  else if (fstat.eq.2) then

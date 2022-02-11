@@ -16,10 +16,9 @@ load "$prom_root/functions/read_emvorado_pol.ncl"
 begin
  ;User Settings 
  ;---------------------------------------------------------------------------------
- pid       = 0            ;Experiment ID
- lnd       = "EHD"
- itype     = "2483"
- expname   = lnd + itype    ;Perturbation ID
+ pid       = 3            ;Experiment ID
+ lnd       = "HET"
+ itype     = "ART"
  Zh_thr    = -5.0   ;dBz
  fgauss    = True         ;Default
  fdeep     = True         ;Deep Convective Storm or Shallow
@@ -27,16 +26,23 @@ begin
 
  ;inst      = 5            ;Ensemble number
  ;
- cnames    = (/"bonnRadar_20150705","bonnRadar_20160513","bonnRadar_20170706"/)
- pnames    = (/"PROM1","PROM2","PROM3"/)
+ cnames    = (/"bonnRadar_20150705","bonnRadar_20160513","bonnRadar_20170706","dummy"/)
+ pnames    = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
+ diri      = "/daten/daten04/pshrestha/shared-data/"
+ diri      = "/p/largedata/hbn33/shrestha1/"
+ dirie     = "/p/largedata/hbn33/test-emvo/"
 
  ;Pre-process
  ;---------------------------------------------------------------------------------
  casename    = cnames(pid)
  pname       = pnames(pid)
- sfold       = "runE_" + inst + "_" + expname
- diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" +  sfold
- diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+ diri_emvo  = dirie + "/" + subevent 
+ diri_cosmo = diri  + "/" + subevent 
 
 ;First extract geographical data
  ;---------------------------------------------------------------------------------

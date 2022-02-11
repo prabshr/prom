@@ -13,28 +13,37 @@ load "$PROM/functions/load_radarColors.ncl"
 
 begin
 ;User Settings ---------------------------------------------------------------
- pid         = 0
+ pid         = 3 
  lnd         = "HET"
- ;itype       = "ART"
- inst        = 6 
+ itype       = "ART"
+ ;inst        = 6 
  iz          = 34 ;21(low level) ; 47(mid level) , 41? ;model level to plot
  dbz_th      = 40.  ;dBZ
  dbz_min     =  0.  ; -5.  ;dBZ
 
 ;;
  casenames   = (/"bonnRadar_20150705"/)
- pnames      = (/"PROM1","PROM2","PROM3"/)
+ pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
  pvars       = (/"Zh","Zdr","KDP","RHV"/)
  punits      = (/"dBZ","dB","deg/km ", "-"/)
 ;;;
- casename    = casenames(pid)
+ ;casename    = casenames(pid)
  pname       = pnames(pid)
- expname     = lnd + itype
- sfold       = "runE_" + inst + "_" + expname
- diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+ ;CLUMA2
+ ;diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
 
+ ;JUWELS
+ diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
+ diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
+ diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent
+ 
 ;Read Grid data ---------------------------------------------------------------
  fil_ivr = diri_cosmo + "/cosout/ivr/lfff00000000c.nc"
  ivr_nc  = addfile(fil_ivr,"r")

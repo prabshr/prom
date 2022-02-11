@@ -26,31 +26,36 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;expid= 1,2,3   ;for RADOLAN
- do inst = 6,6 ;0,19
- ;;MODEL OUTPUT
- ;itype_gscp  = "RHD2483"
- ;CLUMA2
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
-; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
-; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
+ pname = "EMPA1_PROM1";
+ lnd   = "HET"
+ itype = "ART"
+ itype_gscp  = lnd + itype
+ ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+ ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
+ ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
  ;JUWELS
-; diri        = "/p/largedata/hbn33/shrestha1/HET_PROM1/"
-
- subevent    = "runE_" + inst + "_" + itype_gscp
-
- diri_cos    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/add/"
- diri_cosI   = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
+ diri      = "/p/largedata/hbn33/shrestha1/"
+ expname   = lnd + "_" + pname
 
  inset       = False
  fplot       = False ;True
- plotRADOLAN = False 
- 
+ plotRADOLAN = False
+
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
  glat_id = (/50.73052/) ;, 50.737497/) ;
  gmarker = (/10,9/)
- varname = "TOT_PREC" ; 
+ varname = "TOT_PREC" ;
  cnLevels = (/1,5,10,15,20,25,30,40,50,60/)
+
+ do inst = 5,8 ;0,19
+
+ ;;MODEL OUTPUT
+ sfold       = "runE_" + inst + "_" + itype_gscp 
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+ diri_cos    = diri + "/" + subevent + "/cosout/add/"
+ diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+
 ;-----------------------------------------------------------------------------------------
 ; SELECT FILES and EXTENTS for Plots 
 ;-----------------------------------------------------------------------------------------

@@ -2,19 +2,22 @@
 
 begin
 ;--User Settings --------------------------------------------------
-  pid       = 0            ;Experiment ID
-  expname   = "HETART"    ;Perturbation ID
-   ;inst    = 8
+  pid       = 3            ;Experiment ID
+  lnd       = "HET"
+  itype     = "ART"
+  ;inst    = 8
 
   ;First cell
-  t  = 0   ;14 
-  iy = 147; 128 
-  ix = 128 ;157
+  t  = 1   ;14 
+  iy = 135; 128 
+  ix = 136 ;157
 
   ;Search box size
   bs = 40
-  pnames   = (/"ARTPROM1","PROM2","PROM3"/)
-  fname    = pnames(pid) + "_runE_" + inst + "_" + expname
+  pnames   = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
+
+  itype_gscp = lnd + itype   
+  fname    = pnames(pid) + "_runE_" + inst + "_" + itype_gscp
 ;------------------------------------------------------------------
 
   ;Read nc file

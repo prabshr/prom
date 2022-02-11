@@ -4,8 +4,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 
 ; First use dataExtract_rainfall_01.ncl to extract data
 begin
+;fenscolor =True gives different colors to each itype_gscp
+;nes,and nee represents the start and end of ensemble members for each itype_gscp
 
- prom = "prom" + expid
+ prom = "empa2_prom" + expid
 
  ;lcov       = "CASE I :  20150704 0300 - 20150706 0000"
 ; itype_gscp = (/"HET2483","HET2563","HET2683","TGR2483","TGR2563","RADOLAN"/)
@@ -13,13 +15,13 @@ begin
 ; itype_gscp = (/"HET2483","TGR2483","CUR2483","RADOLAN"/)
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
 
-; itype_gscp = (/"HET2483","RADOLAN"/)
- itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
-                "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
-                "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
-                "RADOLAN"/)
- nes        = 6 ;0 
- nee        = 6 ;19 
+ itype_gscp = (/"HETART","RADOLAN"/)
+; itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
+;                "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
+;                "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
+;                "RADOLAN"/)
+ nes        = 5 ;0 
+ nee        = 9 ;19 
  fenscolor  = False
 
  ;PDF parameters
@@ -93,7 +95,7 @@ begin
  do ityp  = 0, dimsizes(itype_gscp)-1           ;BIG LOOP
    res@xyDashPattern = ityp 
    if (ityp.eq.0) then
-     nmax   = (nee-nes+1)*dimsizes(itype_gscp)
+     nmax   = (nee-nes+1)*(dimsizes(itype_gscp)-1) + 1  ;Assume that we have 1 observation data
      pstat  = new((/4, nmax/),"float")
      pstat  = pstat@_FillValue
      barcolors = new(nmax,"string")
@@ -178,14 +180,15 @@ begin
 
  ires@gsnXYBarChart = True            ; Create bar plot
  ires@gsnYRefLine    = 0
- ires@gsnXYBarChartColors2 = barcolors; 
+ ires@gsnXYBarChartColors = barcolors; 
+ print(barcolors)
 
  ires@trYMinF = 0.
  ires@trYMaxF = 20.
 
  ires@tiYAxisString = "Avg. Precip (mm)"
- ;ires@tiXAxisString = "Ens. Members / RADOLAN"
- ires@tiXAxisString = "HET - EHD - RHD - RADOLAN"
+ ires@tiXAxisString = "Ens. Members / RADOLAN"
+ ;ires@tiXAxisString = "HET - EHD - RHD - RADOLAN"
  plot(1) = gsn_csm_xy (wks,pstat(0,:),pstat(1,:),ires)
 
  ;add stddev

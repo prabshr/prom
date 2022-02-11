@@ -11,19 +11,27 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
- pid         = 0
- inst        = 6
- lnd         = "RHD"
-; itype       = 2483
+ pid         = 3 
+ ;inst        = 6
+ lnd         = "HET"
+ itype       = "ART" 
  casenames   = (/"bonnRadar_20150705"/)
- pnames      = (/"PROM1","PROM2","PROM3"/)
+ pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
 ;;;
- casename    = casenames(pid)
+ ;casename    = casenames(pid)
  pname       = pnames(pid)
- expname     = lnd + itype
- sfold       = "runE_" + inst + "_" + expname
- diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+ ;CLUMA2
+ ;diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
+
+ ;JUWELS
+ diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
+ diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -120,7 +128,8 @@ begin
  qliq    = qc + qr
  qice    = qi + qs + qg + qh
  qrs     = qliq + qice
- rhoa    = calcrho_cos_nclf(t,p,qv,qc,qrs)   ;air density kg/m3
+ qcd     = qc*0.  ; dummy, 
+ rhoa    = calcrho_cos_nclf(t,p,qv,qcd,qrs)   ;air density kg/m3
 
  do iz = 0, ndimc(0)-2
    iwv(nf,:,:) = iwv(nf,:,:) + rhoa(iz,:,:)*qv  (iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
@@ -304,34 +313,14 @@ begin
  lwpx   = where(smskc.eq.1, lwp,lwp@_FillValue)
  iwpx   = where(smskc.eq.1, iwp,iwp@_FillValue)
 
- lwp1d = dim_sum_n(dim_sum_n(lwpx,2),1)
- iwp1d = dim_sum_n(dim_sum_n(iwpx,2),1)
-
- lwp1d!0 = "time"
- lwp1d&time = ispan(0,nf_cos-1,1)
-
- iwp1d!0 = "time"
- iwp1d&time = ispan(0,nf_cos-1,1)
-
- lwp1ds  = lwp1d
- iwp1ds  = iwp1d
- lwpx   = where(smskc.eq.1, lwp@_FillValue,lwp)
- iwpx   = where(smskc.eq.1, iwp@_FillValue,iwp)
-
- lwp1ds = dim_sum_n(dim_sum_n(lwpx,2),1)
- iwp1ds = dim_sum_n(dim_sum_n(iwpx,2),1)
-
- 
- fname = "intStat_" + expname + "_" + inst + ".nc"
+ fname = "LWP_" + pname + "_" + sfold + ".nc"
  system("rm " + fname)
  fout = addfile(fname,"c")
 ; fout->IWV = iwv
 ; fout->LWP = lwp
 ; fout->IWP = iwp
- fout->LWP_STORM = lwp1d
- fout->IWP_STORM = iwp1d
- fout->LWP_NSTORM = lwp1ds
- fout->IWP_NSTORM = iwp1ds
+ fout->LWP = lwpx
+ fout->IWP = iwpx
 ; fout->smsk = smskc
 
 end

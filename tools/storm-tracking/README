@@ -33,3 +33,5 @@ Move the smask*.nc and cell*.txt to /nc and /txt located in
 rm PROM*.nc
 rm data_0.nc 
 
+4) Due to think edges, the algorithm might fail sometimes, then the user
+  need to either update the cell text or thin the edges manually.
