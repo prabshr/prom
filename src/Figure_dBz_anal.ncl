@@ -40,7 +40,7 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  prom=4   
- pname="EMPA1_PROM1";
+ pname="EMPA2_PROM1";
  inst=6
  readBPRO = False ;True    ;
  lnd = "HET"
@@ -66,8 +66,8 @@ begin
  else if (prom.eq.4) then
    diri    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705"
    diri    = "/p/largedata/hbn33/shrestha1/"
-   fns     = 0 ;40 ;12
-   fne     = 36; 48
+   fns     = 18 ;18 ;40 ;12
+   fne     = 18 ;33 ;18; 48
    dns     = 0 ;12 ; offset for dbz files
  end if
  end if
@@ -99,7 +99,7 @@ begin
 
  qmin         = tointeger((/-5.,-0.1,-0.5 ,0.8/)*100.)
  qlev         = tointeger((/  5., 0.25, 0.1,0.1/)*100.)
- qmax         = tointeger((/ 55., 4.0, 3. ,1.0/)*100.)
+ qmax         = tointeger((/ 55., 2.0, 3. ,1.0/)*100.)
  pv_dash       = (/0, 0, 1, 1, 1, 1/)
  pv_thickness  = pv_dash + 4.
 
@@ -111,7 +111,7 @@ begin
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
- diri_emvo   = "/p/largedata/hbn33/test-emvo/" + pname + "/" + lnd + "/" + sfold
+ diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
  dataFillVal    = -999        ;Polarimetric flags
 
 ;-----------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ begin
  if (fstrack) then
 
    wfac = 0.15   ;fraction of extent for search area
-   wss  = 0.4    ;SW fraction
+   wss  = 1. ;;;; 0.4    ;SW fraction
    wse  = 1.+wss ;NE fraction
 
    ;Find location where W is maximum ....
@@ -367,6 +367,8 @@ begin
 
   ; Obtain the radar line of view
   ;Ipangle = Ipangles(prom-1)
+  print("adding offset to glon ********")
+  glon_id = glon_id + offs
   plane = radarline_nclf(Ipangle,lat_c,lon_c,glat_id,glon_id,extB,iopt)
 
   glon_p = plane@X
@@ -396,7 +398,7 @@ begin
   prec_c      = tot_prec(ji(0):ji(1),ji(2):ji(3))
   hail_c      = hail_gsp(ji(0):ji(1),ji(2):ji(3))
 
-  vx_c        = varh_c(1,:,:,:)   ;ipol          ;total hydrometeor 
+  vx_c        = varh_c(ipol,:,:,:)   ;ipol          ;total hydrometeor 
   ; Set precip to zero for fn=0
   if (fn.eq.fns) then
     prec_c = 0.
@@ -661,11 +663,22 @@ begin
 
  ;Contours
  res@cnFillOn                   = True
- res@cnLinesOn                  = True ;False  ; False
+ res@cnLinesOn                  = False  ; False
  res@cnInfoLabelOn              = False   ; Turn off annotations
  res@cnLineLabelsOn             = False
  res@cnLevelSelectionMode       = "ExplicitLevels"
- res@cnLevels                   =  colors@zdr_levs ;ispan(qmin(0), qmax(0),qlev(0))/100.
+ if (ipol.eq.0) then
+   res@cnLevels  = colors@zhh_levs
+ else if (ipol.eq.1) then
+   res@cnLevels  = colors@zdr_levs
+ else if (ipol.eq.2) then
+   res@cnLevels  = colors@kdp_levs
+ else if (ipol.eq.3) then
+   res@cnLevels  = colors@rho_levs
+ end if
+ end if
+ end if
+ end if
 
  ;Labels
  res@lbLabelAutoStride          = True
@@ -761,7 +774,7 @@ begin
 
  ;Cross-section Line
  plres = True
- plres@gsLineColor             = "green"
+ plres@gsLineColor             = "grey20"
  plres@gsLineDashPattern        = 3
  plres@gsLineThicknessF         = 3.
  plres@tfPolyDrawOrder          = "PostDraw"
@@ -793,7 +806,7 @@ begin
 ;Add annotation
  txres@txFontHeightF = 0.026
  txres@txBackgroundFillColor = "white"
- gsn_text_ndc(wks,"a)",0.07,0.95,txres) ;
+ ;CPS gsn_text_ndc(wks,"a)",0.07,0.95,txres) ;
 
 ;-----------------------------------------------------------------------------------------
 ;#11b  Cross-Section Plot Resources
@@ -972,12 +985,12 @@ begin
  resV@trXMaxF                       = qmax(ipol)/100. 
  resV@trYMaxF                       = max(ht_v)
  resV@xyLineColor                   = "black" 
- plot(2)                            = gsn_csm_xy (wks,v_v,ht_v,resV) ; create plot
+ ;plot(2)                            = gsn_csm_xy (wks,v_v,ht_v,resV) ; create plot
 
  ;Add annotation
  txres@txFontHeightF = 0.026
  txres@txBackgroundFillColor = -1 ;"white"
- gsn_text_ndc(wks,"b)",0.67,0.95,txres) ;
+ ;CPS gsn_text_ndc(wks,"b)",0.67,0.95,txres) ;
 
 ;Bonn Radar Extent
  ncirc    = 100

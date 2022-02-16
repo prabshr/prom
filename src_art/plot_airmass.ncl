@@ -13,7 +13,7 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  pname = "EMPA2_PROM1";
- inst  = 6
+ inst  = 7 
  lnd   = "HET"
  itype = "ART"
  diri  = "/p/largedata/hbn33/shrestha1/"
@@ -33,8 +33,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/a_cosout/"
-  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/aiop_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/aiop_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -76,7 +76,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ;#2b Extract lognormal ASD for each mode
 ;-----------------------------------------------------------------------------------------
-  do nf = snf,snf ;dimsizes(fils_cos)-1
+  do nf = 0, dimsizes(fils_cos)-1
 
   fil_cos  = fils_cos(nf)
 

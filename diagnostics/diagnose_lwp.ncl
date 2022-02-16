@@ -7,10 +7,11 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 function data_extract(diri,opt)
   begin
-  print("Extracting "  + diri)
   fname  = diri + "/LWP_" + opt@pname + "_runE_" + opt@inst + "_" + opt@lnd + opt@itype + ".nc"
+  print("Extracting "  +fname)
   nc_fil = addfile(fname,"r")
-  data = (/nc_fil->$opt@varname$/)/100.0 ;scaled to 100 kg/m2
+  data3d = (/nc_fil->$opt@varname$/)/100.0 ;scaled to 100 kg/m2
+  data = dim_sum_n(dim_sum_n(data3d,2),1)
   ndim = dimsizes(data)
   time = opt@sthr + ispan(0,ndim-1,1)*opt@nt/60.    ;5-15 minute interval data
   time@units = "hours since 0000-01-01 00:00:00"
@@ -30,7 +31,7 @@ begin
   opt@lnd  = "HET"
   opt@itype = "ART"
   opt@pname = "EMPA2_PROM1"
-  opt@varname = "IWP_STORM"
+  opt@varname = "SLWP"
 
   temp = data_extract(diri ,opt)
   ndim = dimsizes(temp)

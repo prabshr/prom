@@ -21,12 +21,12 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
   pname = "EMPA2_PROM1";
-  inst  = 6
+  inst  = 7
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
 
-  nf          = 32
+  ;;nf          = 32
   glon_idB    = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB    = 50.73052
 
@@ -35,8 +35,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/a_cosout/"
-  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/aiop_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/aiop_cosout/ivr/"
 
 ;STEP 2 Set variables to read and specify scales or offsets
 ;-------------------------------------------------------------------------------------

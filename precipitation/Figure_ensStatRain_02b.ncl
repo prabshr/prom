@@ -109,7 +109,7 @@ begin
  fncps_no = 21
  fncps_hgt = 0.02 ;8
 
- wks_type                 = "png"
+ wks_type                 = "x11"
  wks = gsn_open_wks(wks_type,fname_out)
  if (fstat.eq.1) then
    gsn_define_colormap(wks,"precip2_17lev")

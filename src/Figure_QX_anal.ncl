@@ -50,9 +50,9 @@ begin
  else if (prom.eq.4) then
    diri    = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
    diri    = "/p/largedata/hbn33/shrestha1/"
-   pname   = "EMPAPROM1"
-   fns     = 32 
-   fne     =  36 
+   pname   = "EMPA2_PROM1"
+   fns     = 18 
+   fne     = 18 
    xlon = (/50.7, 51.1/)
    offs    = 0
  end if

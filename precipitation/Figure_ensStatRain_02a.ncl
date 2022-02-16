@@ -38,7 +38,7 @@ begin
  plot         = new(2,"graphic")
 
  fnameout     = "Figure_histo_" + expid
- wks          = gsn_open_wks("png",fnameout)
+ wks          = gsn_open_wks("x11",fnameout)
  res          = True
 
 ;gsn Resources

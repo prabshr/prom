@@ -110,6 +110,10 @@ begin
    lwp       = 0.
    iwp       = 0.
    iwv       = 0.
+  
+   slwp      = lwp
+   slwp@long_name = "Supercooled Liquid Water Path"
+
  end if
 
  filC    = addfile(fils_cos(nf),"r")
@@ -135,6 +139,14 @@ begin
    iwv(nf,:,:) = iwv(nf,:,:) + rhoa(iz,:,:)*qv  (iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
    lwp(nf,:,:) = lwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
    iwp(nf,:,:) = iwp(nf,:,:) + rhoa(iz,:,:)*qice(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
+
+   ;Supercooled LWP, use model level with >99% of domain having temperature less than 0 degrees C
+   t1d = ndtooned(t(iz,:,:))-273.14
+   sval = dimsizes(ind(t1d.le.0.))*1./(dimsizes(t1d)*1.)
+   if (sval.gt.0.99) then
+     slwp(nf,:,:) = slwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:)) 
+   end if
+   
  end do
 
  print("Processing " + nf + "..." )
@@ -312,6 +324,7 @@ begin
  smskc = smsk(:, nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  lwpx   = where(smskc.eq.1, lwp,lwp@_FillValue)
  iwpx   = where(smskc.eq.1, iwp,iwp@_FillValue)
+ slwpx  = where(smskc.eq.1, slwp,slwp@_FillValue)
 
  fname = "LWP_" + pname + "_" + sfold + ".nc"
  system("rm " + fname)
@@ -321,6 +334,7 @@ begin
 ; fout->IWP = iwp
  fout->LWP = lwpx
  fout->IWP = iwpx
+ fout->SLWP = slwpx
 ; fout->smsk = smskc
 
 end

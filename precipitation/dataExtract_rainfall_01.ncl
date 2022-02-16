@@ -26,7 +26,7 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;expid= 1,2,3   ;for RADOLAN
- pname = "EMPA1_PROM1";
+ pname = "EMPA2_PROM1";
  lnd   = "HET"
  itype = "ART"
  itype_gscp  = lnd + itype
@@ -48,7 +48,7 @@ begin
  varname = "TOT_PREC" ;
  cnLevels = (/1,5,10,15,20,25,30,40,50,60/)
 
- do inst = 5,8 ;0,19
+ do inst = 5,9 ;0,19
 
  ;;MODEL OUTPUT
  sfold       = "runE_" + inst + "_" + itype_gscp 

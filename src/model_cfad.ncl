@@ -8,6 +8,7 @@
 ; opt = True, generates CFADS for individual ensemble members
 ; opt = False,reads nc CFAD data for mulitple ensemble memebers to generate CFAD
 ; fcrop = True works with opt=False
+; st and et determines time
 
 ;P. Shrestha
 ;Nov 18 2019
@@ -54,7 +55,7 @@ begin
  itype       = "ART"
  inst        = 6 
  opt         = True
- wks_type     = "x11"
+ wks_type     = "png"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
@@ -107,6 +108,11 @@ begin
    st       = smsk@st
    et       = smsk@et
 
+   print(st + " " + et)
+   print("CFAD From 1530 to 1445.....")
+   print("***************")
+   st = 18
+   et = 33 
    ;Initialize for cropping extent while plotting
    x = ispan(0,nx-1,1)
    y = ispan(0,ny-1,1)
