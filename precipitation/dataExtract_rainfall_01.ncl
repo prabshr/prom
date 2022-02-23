@@ -1,5 +1,12 @@
 ;======================================================
 ; Diagnose spatial rainfall
+; filindex is used to specify first and second file to obtain
+; the accumulated precipitation from the given cosmo output folder
+; But since we are using the total precipiation from the entire simulation
+; only the second index of filindex is important here !
+; RADOLAN data also applies the same !
+
+; Introduced fstormmask for estimating rain from isolated storm only
 ; 26.03.2012 Created 
 ; 20.04.2012 Added Flags readcos, readclm, readpfl
 ;======================================================
@@ -28,17 +35,20 @@ begin
  ;expid= 1,2,3   ;for RADOLAN
  pname = "EMPA2_PROM1";
  lnd   = "HET"
- itype = "ART"
+ itype = "ART_BD"
  itype_gscp  = lnd + itype
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
  ;JUWELS
  diri      = "/p/largedata/hbn33/shrestha1/"
+ diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
+
  expname   = lnd + "_" + pname
 
  inset       = False
  fplot       = False ;True
+ fstormmask  = False ;True
  plotRADOLAN = False
 
  ;Bonn Radar
@@ -48,7 +58,7 @@ begin
  varname = "TOT_PREC" ;
  cnLevels = (/1,5,10,15,20,25,30,40,50,60/)
 
- do inst = 5,9 ;0,19
+ do inst = 6,6 ;0,19    ;ENS LOOP
 
  ;;MODEL OUTPUT
  sfold       = "runE_" + inst + "_" + itype_gscp 
@@ -59,7 +69,7 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; SELECT FILES and EXTENTS for Plots 
 ;-----------------------------------------------------------------------------------------
- filindex      = ispan(0,1,1) 
+ filindex      = (/0,1/) ;ispan(0,1,1) 
  ;dext          = 1.5
  ;mpcorner      = (/glat_id(0)-dext,glon_id(0)-dext,glat_id(0)+dext,glon_id(0)+dext/)
  nbdl          = 3 + 17  ;exclude boundaries and relaxation zone
@@ -105,7 +115,7 @@ begin
   ix(ii) = nm(ii,1)
  end do
 ;
- do fnctr = 1, nf_ctr-1   ;;BIG LOOP OVER FILES 
+ do fnctr = 0, nf_ctr-1   ;;BIG LOOP OVER FILES 
    
    fn = filindex(fnctr)
    nc_cos = addfile(fils_cos(fn),"r")
@@ -131,22 +141,20 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; MAIN PLOT SPECIFIC RESOURCES
 ;-----------------------------------------------------------------------------------------
- pvarout = varout(fnctr,:,:)
-
- print(min(pvarout@lat2d) + " " + max(pvarout@lat2d) + " " + min(pvarout@lon2d) + " " + max(pvarout@lon2d))
-
- pvarout = where(pvarout.gt.0.1,pvarout,pvarout@_FillValue)
-
- foutname = "accprecip_" + itype_gscp + "_" + inst + ".nc"
- system("rm " + foutname)
- fout = addfile(foutname,"c")
- fout->ACCRAIN = pvarout
-
- system("rm georain.nc")
- fout = addfile("georain.nc","c")
- fout->topo  = topo
- fout->lat2d = lat2d
- fout->lon2d = lon2d
+;CPS Moved outside now
+ 
+; pvarout = varout(fnctr,:,:)
+; print(min(pvarout@lat2d) + " " + max(pvarout@lat2d) + " " + min(pvarout@lon2d) + " " + max(pvarout@lon2d))
+; pvarout = where(pvarout.gt.0.1,pvarout,pvarout@_FillValue)
+; foutname = "accprecip_" + itype_gscp + "_" + inst + ".nc"
+; system("rm " + foutname)
+; fout = addfile(foutname,"c")
+; fout->ACCRAIN = pvarout
+; system("rm georain.nc")
+; fout = addfile("georain.nc","c")
+; fout->topo  = topo
+; fout->lat2d = lat2d
+; fout->lon2d = lon2d
 
  if (plotRADOLAN) then
    foutname = "/daten01/z4/database/radola/accprecip_prom"+expid+"_RADOLAN_0.nc"
@@ -156,7 +164,7 @@ begin
    pvarout@lon2d = lon2d
  end if
 
- print("Min : " + min(pvarout) + " Max : " + max(pvarout) + " Avg : " + avg(pvarout) )
+ ;print("Min : " + min(pvarout) + " Max : " + max(pvarout) + " Avg : " + avg(pvarout) )
 
  if (fplot) then
 ;-----------------------------------------------------------------------------------------
@@ -341,5 +349,34 @@ begin
  end if     ; fplot
  end do     ;;BIG LOOP OVER FILES
 
- end do
+
+ ;DEBUG OUT 
+ ;Now obtain the accumulated precipitaiton between two time steps ....
+ ;--------------------------------------------------------------------
+ pvarout = varout(1,:,:) - varout(0,:,:)
+ pvarout = where(pvarout.gt.0.1,pvarout,pvarout@_FillValue)
+ if (fstormmask) then
+   fsname   = "smask_" + pname + "_" + sfold + ".nc"
+   diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
+   nc_spath = addfile(diri_spath + "/" + fsname,"r")
+   smsk     = nc_spath->Band1(:,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+   ssmask   = dim_sum_n(smsk,0)
+   pvarout  = where(ssmask.gt.0,pvarout,pvarout@_FillValue)
+ end if
+
+
+ print("Min : " + min(pvarout) + " Max : " + max(pvarout) + " Avg : " + avg(pvarout) )
+
+ foutname = "accprecip_" + itype_gscp + "_" + inst + ".nc"
+ system("rm " + foutname)
+ fout = addfile(foutname,"c")
+ fout->ACCRAIN = pvarout
+
+ system("rm georain.nc")
+ fout = addfile("georain.nc","c")
+ fout->topo  = topo
+ fout->lat2d = lat2d
+ fout->lon2d = lon2d
+
+ end do   ;ENS LOOP
 end

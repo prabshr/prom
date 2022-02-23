@@ -52,10 +52,10 @@ begin
  ;User Settings ---------------------------------------------------------------
  pid         = 3 
  lnd         = "HET"
- itype       = "ART"
+ itype       = "ART_GS"
  inst        = 6 
  opt         = True
- wks_type     = "png"
+ wks_type     = "x11"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
@@ -77,8 +77,17 @@ begin
  
  ;JUWELS
  diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent 
+
+ print("CPS hardwiring ")
+ itype_gscp  = "HETART"
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+
  diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
  diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent 
+;
 
 ;Read netcdf files
 ;---------------------------------------------------------------------------
@@ -109,10 +118,10 @@ begin
    et       = smsk@et
 
    print(st + " " + et)
-   print("CFAD From 1530 to 1445.....")
+   print("CFAD From 1445 to 1530 .....")
    print("***************")
-   st = 18
-   et = 33 
+   st = 9 ; 18
+   et = 18 ;33 
    ;Initialize for cropping extent while plotting
    x = ispan(0,nx-1,1)
    y = ispan(0,ny-1,1)

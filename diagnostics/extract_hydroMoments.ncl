@@ -4,19 +4,21 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$TPS/functions/calcrho_cos_nclf.ncl"
 
-;Computes Precipitatble Water, LWP and IWP
+;Extracts mass density, number density, particle diameters
 
 begin
 
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
+ ic          = 0 ;select hydrometeor
+
  pid         = 3 
  ;inst        = 6
  lnd         = "HET"
  itype       = "ART" 
  casenames   = (/"bonnRadar_20150705"/)
- pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
+ pnames      = (/"PROM1","PROM2","PROM3","EMPA2HC_PROM1"/)
 ;;;
  ;casename    = casenames(pid)
  pname       = pnames(pid)
@@ -87,6 +89,15 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; READ NC FILES
 ;-----------------------------------------------------------------------------------------
+ hydrometeors_qx = (/"QC","QR","QI","QS","QG","QH"/)
+ hydrometeors_qn = (/"NCCLOUD","NCRAIN","NCICE","NCSNOW","NCGRAUPEL","NCHAIL"/)
+ a_geo        = (/0.124    , 0.124  , 0.835 , 2.4    , 0.142     , 0.1366/)  ;mkg-b
+ x3           = 1./3.
+ b_geo        = (/x3       , x3     , 0.39  , 0.455  , 0.314     , x3/)      ;-
+ xmin         = (/4.2E-15  , 2.6E-10, 1.E-12, 1.E-10, 1.E-9, 2.6E-9/)        ;kg
+ xmax         = (/2.6E-10  , 3.0E-6 , 1.E-6 , 2.E-5 , 5.E-4, 5.E-4/)         ;g
+
+ ;
  fils_cos  = systemfunc("ls " + diri_cosmo + "/cosout/lf*")
  nf_cos    = dimsizes(fils_cos)
 
@@ -94,60 +105,62 @@ begin
 
  if (nf.eq.st) then
    ;Initialize variables
-   iwv           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
-   iwv@lat2d     = lat2d
-   iwv@lon2d     = lon2d
-   iwv@long_name = "Precipitable Water"   ;or water vapor
-   iwv@units     = "mm"
-   iwv@_FillValue = -999.
-   iwv           = iwv@_FillValue
-
-   lwp           = iwv
-   lwp@long_name = "Liquid Water Path"
-
-   iwp           = iwv
-   iwp@long_name = "Ice Water Path" 
-   lwp       = 0.
-   iwp       = 0.
-   iwv       = 0.
-  
-   slwp      = lwp
-   slwp@long_name = "Supercooled Liquid Water Path"
-
+   hval           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
+   hval@lat2d     = lat2d
+   hval@lon2d     = lon2d
+   hval@_FillValue = -999.
+   hval = 0. 
+   hval1 = hval
+   hval2 = hval
  end if
 
  filC    = addfile(fils_cos(nf),"r")
- qv      = filC->QV(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ qx      = filC->$(hydrometeors_qx(ic))$(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ qn      = filC->$(hydrometeors_qn(ic))$(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+
+ ;density
  t       = filC->T (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  p       = filC->P (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ qv      = filC->QV(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qc      = filC->QC(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qr      = filC->QR(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qi      = filC->QI(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qs      = filC->QS(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qg      = filC->QG(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  qh      = filC->QH(0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
- u       = filC->U (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
- v       = filC->V (0,::-1,nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
 
  qliq    = qc + qr
  qice    = qi + qs + qg + qh
  qrs     = qliq + qice
- qcd     = qc*0.  ; dummy, 
+ qcd     = qc*0.  ; dummy,
  rhoa    = calcrho_cos_nclf(t,p,qv,qcd,qrs)   ;air density kg/m3
 
- do iz = 0, ndimc(0)-2
-   iwv(nf,:,:) = iwv(nf,:,:) + rhoa(iz,:,:)*qv  (iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
-   lwp(nf,:,:) = lwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
-   iwp(nf,:,:) = iwp(nf,:,:) + rhoa(iz,:,:)*qice(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
+ ;********************
+ qx      = qx*rhoa    ;kg/m3
+ qn      = qn*rhoa    ;m-3
 
-   ;Supercooled LWP, use model level with >99% of domain having temperature less than 0 degrees C
-   t1d = ndtooned(t(iz,:,:))-273.14
-   sval = dimsizes(ind(t1d.le.0.))*1./(dimsizes(t1d)*1.)
-   if (sval.gt.0.99) then
-     slwp(nf,:,:) = slwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:)) 
-   end if
-   
- end do
+ ;********************
+ qn      = where(qn.eq.0, hval@_FillValue, qn)
+ qn@_FillValue = hval@_FillValue
+
+ xmass   = (/(qx/qn)/)   ; kg
+ ;Clipping
+ xmass   = where(xmass.gt.xmin(ic),xmass,0.)
+ xmass   = where(xmass.gt.xmax(ic),xmax(ic),xmass)
+ ;diameter mass relationship
+ dx      = (/(a_geo(ic) * (xmass)^b_geo(ic))/)   
+ dx@_FillValue = hval@_FillValue
+ dx      = where(dx.eq.0, hval@_FillValue, dx)
+
+ qx@_FillValue = hval@_FillValue
+ qx      = where(qx.eq.0, hval@_FillValue, qx)
+ 
+
+ ;********************
+
+ hval(nf,:,:) = dim_avg_n(dx,0)*1.E6         ;um
+ hval1(nf,:,:) = dim_avg_n(qx,0)*1.E3   ;g/m3
+ hval2(nf,:,:) = dim_avg_n(qn,0)/1.E6   ;cm-3
 
  print("Processing " + nf + "..." )
 
@@ -322,19 +335,24 @@ begin
 
  ;Crop smask
  smskc = smsk(:, nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
- lwpx   = where(smskc.eq.1, lwp,lwp@_FillValue)
- iwpx   = where(smskc.eq.1, iwp,iwp@_FillValue)
- slwpx  = where(smskc.eq.1, slwp,slwp@_FillValue)
+ hvalx   = where(smskc.eq.1, hval,hval@_FillValue)
+ hval1x  = where(smskc.eq.1, hval1,hval@_FillValue)
+ hval2x  = where(smskc.eq.1, hval2,hval@_FillValue)
 
- fname = "LWP_" + pname + "_" + sfold + ".nc"
+
+ hvalx@long_name = "Average Diameter of " + hydrometeors_qx(ic)
+ hvalx@units     = "um"
+
+ hval1x@long_name = "Mass density of " + hydrometeors_qx(ic)
+ hval1x@units   =  "g/m3"
+
+ hval2x@long_name = "Number density of " + hydrometeors_qx(ic)
+ hval2x@units   =  "cm-3"
+
+ fname = "QX_" + pname + "_" + sfold + ".nc"
  system("rm " + fname)
  fout = addfile(fname,"c")
- fout->IWV = iwv
-; fout->LWP = lwp
-; fout->IWP = iwp
- fout->LWP = lwpx
- fout->IWP = iwpx
- fout->SLWP = slwpx
-; fout->smsk = smskc
-
+ fout->DX = hvalx
+ fout->QX = hval1x
+ fout->QN = hval2x
 end

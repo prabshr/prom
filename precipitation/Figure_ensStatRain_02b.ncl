@@ -31,9 +31,9 @@ begin
  nfe = 9 ;19
  plotRADOLAN = True ;False
  diriR       = "/daten01/z4/database/radola/"  ;RADOLAN data
- diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_empa2_prom1/" 
+ diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_EMPA2_prom1/" 
  fstat       = 1
- diri        = "./data_empa2_prom" + expid
+ diri        = "./data_EMPA2_prom" + expid
  prefx       = "accprecip_HETART"
 
  ;Bonn Radar

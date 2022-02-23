@@ -18,7 +18,7 @@ begin
  ;---------------------------------------------------------------------------------
  pid       = 3            ;Experiment ID
  lnd       = "HET"
- itype     = "ART"
+ itype     = "ART_BD"
  Zh_thr    = -5.0   ;dBz
  fgauss    = True         ;Default
  fdeep     = True         ;Deep Convective Storm or Shallow

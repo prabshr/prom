@@ -9,6 +9,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$PROM/functions/shade_terrain.ncl"
 load "$PROM/functions/load_radarColors.ncl"
 load "$prom_root/functions/read_emvorado_pol.ncl"
+load "$prom_root/functions/generateXY.ncl"
 external EXT1 "$prom_root/functions/readdim.so"
 external EXT2 "$prom_root/functions/readascii.so"
 
@@ -24,31 +25,13 @@ begin
  itype = "ART"
  itype_gscp  = lnd + itype
 
- pid       = 0 
- fn        = 18
- lat_ext   = 52.0
- lat_ext0   = 40.0
-
-; ydates    = (/"20150705","20160513","20170706"/)
-; insts     = (/6, 8, 11/)
-; fns       = (/11,15,18/)
-; ixs       = (/90,124,95/)
-; lat_exts  = (/51.2, 50.8, 51./)
-; lat_exts0 = (/40.0, 40.0, 50.42/)
-
-;SPP proposal
-; insts     = (/5, -1, -1/)
-; fns       = (/21,-1,-1/)
-; ixs       = (/184,-1,-1/) - 65
-; lat_exts  = (/51.6, -1, -1/)
- ;----
-
-; lat_ext0  = lat_exts0(pid)
-; lat_ext   = lat_exts(pid)
-; fn        = fns(pid)
-; ix        = ixs(pid)
-; inst      = insts(pid)
-; ydate     = ydates(pid)
+ ;
+ fn          = 18
+ ix          = 191
+ izlevs      = (/25, 44, 54/)
+                ;y1 x1 y2   x2
+ xycorner    = (/-10, -10, 110, 110/)
+ ;
 
  diri        = "/p/largedata/hbn33/shrestha1/"
  sfold       = "runE_" + inst + "_" + itype_gscp
@@ -69,24 +52,7 @@ begin
  frhi        = True ;replace 3rd level ppi with rhi
  glon_idB    = 7.071663 ; Bonn Radar
  glat_idB    = 50.73052 ;
- dlat        = 1.0 ;0.5
- dlon        = 1.0 ; 0.5
-
- if (pid.eq.0) then
-   ;mpc  = (/50. + 40./60., 6. + 50./60., 51. + 15./60., 7. + 30./60./)
-    mpc  = (/50. + 40./60., 6. + 50./60., 51. + 40./60., 8. + 30./60./)
-   izlevs      = (/25, 44, 54/)
- else if (pid.eq.1) then
-   mpc  = (/50. + 10./60., 7. + 0./60., 51. + 0./60., 8. + 0./60./) 
-   izlevs      = (/25, 41, 54/)
- else if (pid.eq.2) then
-   mpc  = (/50. + 5./60., 6. + 40./60., 51. + 0./60., 7. + 50./60./)
-   izlevs      = (/25, 44, 54/)
- else
-   mpc  = (/glat_idB - dlat, glon_idB - dlon, glat_idB + dlat, glon_idB + dlon/)
- end if
- end if
- end if
+ dxy         = 1.132  ;km
 
 ;;;;;;;;;;
 ;-----------------------------------------------------------------------------------------
@@ -107,6 +73,11 @@ begin
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  ;nfils   = dimsizes(fils_cos)
  ;nfils    = fne - fns + 1
+
+ ;Generate X-Y coordinates in km
+ XYkm = generateXY(lat_c,lon_c,glat_idB,glon_idB)
+ Ykm  = XYkm(1,:,:)
+ Xkm  = XYkm(0,:,:)
 
  ;----------------------------------------------------
  npol          = dimsizes(pvars)
@@ -205,11 +176,12 @@ begin
  varh(3,:,:,:) = where(Zh.lt.-5., varh@_FillValue, RHV)
  delete([/Zh, Zv, KDP, RHV/])
 
- ;Variable to plot
- varh@lat2d    = lat_c
- varh@lon2d    = lon_c
+ varh!2 = "Y"
+ varh!3 = "X"
+ varh&Y = Ykm(:,0)
+ varh&X = Xkm(0,:)
 
-
+ 
  print("Plotting ...")
 
  fncps_no = ":F21:"
@@ -224,12 +196,13 @@ begin
    dum3   = new(np,"graphic")
    dum4   = new(np,"graphic")
    dum_cs = new(np,"graphic")
+   dum_hy = new(np,"graphic")
+   dum_hx = new(np,"graphic")
  end if
 
 
  res      = True
- ppid     = pid + 1
- wks      = gsn_open_wks("x11", "Figure_case" + ppid + "_i" + inst + "_t" + fn + "_ix" + ix)
+ wks      = gsn_open_wks("x11", "Figure_case_i" + inst + "_t" + fn + "_ix" + ix)
 
  colors   = load_radarColors(0)
 
@@ -267,6 +240,10 @@ begin
  res@tiXAxisFontHeightF         = fncps_hgt
  res@tiYAxisFontHeightF         = fncps_hgt
 
+ res@tiYAxisString              = "Y Range [km]"
+ res@tiXAxisString              = "X Range [km]"
+
+
  res3 = res   ;for frhi = True
 
  ;pm resources
@@ -274,27 +251,6 @@ begin
  res@pmTickMarkDisplayMode      = "Always"
  res@pmLabelBarOrthogonalPosF   = 0.3
  ;res@pmLabelBarParallelPosF     = 0.2
-
- ;mp Resources
- ;----------------------
-
- res@mpLimitMode                  = "Corners"           ; method to zoom
- res@mpLeftCornerLatF             = max((/mpc(0),min(lat_c)/)) 
- res@mpLeftCornerLonF             = max((/mpc(1),min(lon_c)/))
- res@mpRightCornerLatF            = min((/mpc(2),max(lat_c)/))
- res@mpRightCornerLonF            = min((/mpc(3),max(lon_c)/))
- res@mpOutlineOn                  = True
- res@mpOutlineBoundarySets        = "National"
- res@mpDataSetName                = "Earth..4"    ; database for non-USA divisions
- res@mpDataBaseVersion            = "MediumRes"   ; Medium resolution database
-; res@mpOutlineSpecifiers          = "India:Uttaranchal"
- res@mpGridAndLimbOn              = True
- res@mpNationalLineThicknessF     = 3.0
- res@mpGeophysicalLineThicknessF  = 3.0
- res@mpProvincialLineThicknessF   = 2.0
- res@mpPerimOn                    = True
- res@mpFillOn                     = False
-
 
  ;cn Resources
  ;-------------------------
@@ -306,10 +262,10 @@ begin
 
  ;tr Resources
  ;-----------------------------
- ;res@trXMinF = 60
- ;res@trYMinF = 60
- ;res@trXMaxF = 140
- ;res@trYMaxF = 140
+ res@trXMinF = xycorner(1)  
+ res@trYMinF = xycorner(0) 
+ res@trXMaxF = xycorner(3)
+ res@trYMaxF = xycorner(2)
 
  delete(res2@gsnLeftStringFontHeightF)
  delete(res2@gsnRightStringFontHeightF)
@@ -339,7 +295,13 @@ begin
  else
    nzz = nzp-1
  end if
-
+ ;
+ if (ik.eq.1) then
+   res@tiXAxisString   = "X Range [km]"
+ else
+   res@tiXAxisString   = ""
+ end if
+ ;
  if (ik.eq.nzz) then
    res@lbLabelBarOn = True
    res@tmXBLabelsOn = True
@@ -359,7 +321,9 @@ begin
      ipol_levs = colors@zhh_levs
      res@tmYLLabelsOn = True
      res@gsnRightString = ""
+     res@tiYAxisString = "Y Range [km]"
    else
+     res@tiYAxisString = ""
      res@tmYLLabelsOn = False
    end if
 
@@ -385,7 +349,7 @@ begin
    end if
 
    res@cnLevels                   =  ipol_levs
-   plot(ip)  = gsn_csm_contour_map(wks,varh(ipol,iz,:,:) ,res)
+   plot(ip)  = gsn_csm_contour(wks,varh(ipol,iz,:,:) ,res)
 
    if (ipol.eq.1) then
      res2@cnLevels                   = (/20.,30.,40.,50./) ; ipol_1levs(1:)
@@ -396,10 +360,16 @@ begin
    if (frhi) then
    if (ik.lt.nzp-1) then
      pres                  = True
-     pres@gsLineColor      = "gray"
-     ypoly_cs = (/mpc(0),mpc(2)/)
-     xpoly_cs = (/avg(lon_c(:,ix)),avg(lon_c(:,ix))/)
+     pres@gsLineColor      = "black"
+     pres@gsLineDashPattern = 0
+     ypoly_cs = (/xycorner(0),xycorner(2)/)
+     xpoly_cs = (/Xkm(0,ix),Xkm(0,ix)/)
      dum_cs(ip) = gsn_add_polyline(wks,plot(ip),xpoly_cs,ypoly_cs,pres)
+     pres@gsLineDashPattern = 2
+     xpoly_cs = (/-150,150/)
+     ypoly_cs = (/ 0, 0/)
+     dum_hy(ip) = gsn_add_polyline(wks,plot(ip),ypoly_cs,xpoly_cs,pres)
+     dum_hx(ip) = gsn_add_polyline(wks,plot(ip),xpoly_cs,ypoly_cs,pres)
      delete(pres)
    end if
    end if 
@@ -413,7 +383,7 @@ begin
    txres@txFontThicknessF      = 5.
    txres@txFontHeightF           = 0.045
    txres@txFontColor           = "black"
-   dumtxt = gsn_add_text(wks,plot(ip),"x",glon_idB,glat_idB,txres)
+   dumtxt = gsn_add_text(wks,plot(ip),"x",0.,0.,txres)
 
    ;dum      = gsn_csm_contour(wks,phgt,res2)
    ;overlay(plot(ip),dum)
@@ -427,11 +397,11 @@ begin
       sdims         = dimsizes(spol)
       spol!0        = "Z"
       spol!1        = "Y"
-      spol&Y        = lat_c(:,ix) ; degrees 
+      spol&Y        = Ykm(:,ix) ; km 
       spol0          = (/varh(0,:,:,ix)/)    
       spol0!0        = "Z"
       spol0!1        = "Y"
-      spol0&Y        = lat_c(:,ix) ; degrees
+      spol0&Y        = Ykm(:,ix) ; km 
 
       xval2x        = conform_dims(sdims,spol&Y,1)*1.
       zval2x        = mhgt(:,:,ix)/1000.  ;km
@@ -440,7 +410,7 @@ begin
       xypoly  = shade_terrain(xval2x,zval2x)
       xpoly   = xypoly(0,:)
       ypoly   = xypoly(1,:)
-      xpoly1   = (/mpc(0),mpc(2)/)
+      xpoly1   = (/xycorner(0),xycorner(2)/)
       ypoly1  = (/avg(mhgt(izlevs(0),:,:)),avg(mhgt(izlevs(0),:,:))/)
       ypoly2  = (/avg(mhgt(izlevs(1),:,:)),avg(mhgt(izlevs(1),:,:))/) 
 
@@ -461,24 +431,21 @@ begin
 
       res3@vpWidthF = 0.4
 
-      res3@trXMinF    = max((/lat_ext0,mpc(0)/))
-      res3@trXMaxF    = min((/lat_ext,mpc(2)/))
+      res3@trXMinF    = xycorner(0) 
+      res3@trXMaxF    = xycorner(2) 
       res3@trYMaxF    = 15.
 
-      res3@tmXBMode   = "Explicit"
-      res3@tmXBValues = xval2x(0,ispan(0,sdims(1)-1,20)) 
-      res3@tmXBLabels = tointeger((res3@tmXBValues)*100)/100.
  ;CPS     res3@tmXBLabelsOn = False
 
       res3@lbOrientation = "Vertical"
 
-      res3@tiXAxisString = " " ;"Latitude [~F34~0~F~N]"
+      res3@tiXAxisString = "Y Range [km]" ;"Latitude [~F34~0~F~N]"
       if (ipol.eq.0) then
         res3@tmYLLabelsOn = True
         res3@tiYAxisString = "Height [km]"
       else
-;CPS        res3@tiYAxisString = ""
-;CPS        res3@tmYLLabelsOn = False
+        res3@tiYAxisString = ""
+        res3@tmYLLabelsOn = False
       end if
 
       plot(ip)  = gsn_csm_contour(wks,spol,res3)
@@ -514,16 +481,18 @@ begin
  txres@txFontHeightF = 0.016                    ; text font height
  txres@txJust        = "CenterLeft"              ; Default is "CenterCenter".
 
-;CPS  gsn_text_ndc(wks,"a)",.05,.77,txres)
-;CPS  gsn_text_ndc(wks,"b)",.05,.58,txres)
-;CPS  gsn_text_ndc(wks,"c)",.05,.40,txres)  ;0.39
+ gsn_text_ndc(wks,"a)",.005,.83,txres)
+ gsn_text_ndc(wks,"b)",.005,0.62,txres)
+ gsn_text_ndc(wks,"c)",.005,.36,txres)  ;0.39
 
  
  resP = True
  resP@gsnMaximize    = True 
  ;resP@gsnPanelXF = (/-1,0.36,0.64,-1,0.36,0.64,-1,0.36,0.64/)
  resP@gsnPanelXF = (/-1,0.26,0.46,.66,-1,0.26,0.46,.66,-1,0.26,0.46,.66/)  ;for 4 columns  
- ;resP@gsnPanelDebug = True
+ resP@gsnPanelYF = (/-1,-1,-1,-1,0.61,0.61,0.61,0.61,0.35,0.35,0.35,0.35/)
+
+ resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/nzp,npol/), resP)
 
 end

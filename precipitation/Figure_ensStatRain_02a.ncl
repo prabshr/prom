@@ -4,10 +4,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 
 ; First use dataExtract_rainfall_01.ncl to extract data
 begin
-;fenscolor =True gives different colors to each itype_gscp
+;fenscolor =True gives different colors to each ensemble members
 ;nes,and nee represents the start and end of ensemble members for each itype_gscp
 
- prom = "empa2_prom" + expid
+ prom = "EMPA2_prom" + expid
 
  ;lcov       = "CASE I :  20150704 0300 - 20150706 0000"
 ; itype_gscp = (/"HET2483","HET2563","HET2683","TGR2483","TGR2563","RADOLAN"/)
@@ -15,13 +15,15 @@ begin
 ; itype_gscp = (/"HET2483","TGR2483","CUR2483","RADOLAN"/)
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
 
- itype_gscp = (/"HETART","RADOLAN"/)
+ itype_gscp = (/"HETART","HETART_BD","HETART_HC","HETART_1n1m","RADOLAN"/)
+ colors     = (/"red", "green", "blue", "orange", "black"/)
+
 ; itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
 ;                "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
 ;                "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
 ;                "RADOLAN"/)
- nes        = 5 ;0 
- nee        = 9 ;19 
+ nes        = 6 ;0 
+ nee        = 6 ;19 
  fenscolor  = False
 
  ;PDF parameters
@@ -142,9 +144,9 @@ begin
         barcolors(ctr) = "gray"
       end if
      else
-      res@xyLineColor = "gray"
-      res@xyMarkerColor = "gray"
-      barcolors(ctr) = "gray"
+      res@xyLineColor = colors(ityp) ;"gray"
+      res@xyMarkerColor = colors(ityp) ; "gray"
+      barcolors(ctr) = colors(ityp) ;"gray"
      end if
 
      if (itype_gscp(ityp).eq."RADOLAN") then

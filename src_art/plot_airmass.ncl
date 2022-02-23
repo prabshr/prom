@@ -18,7 +18,7 @@ begin
  itype = "ART"
  diri  = "/p/largedata/hbn33/shrestha1/"
 
- height  = 2000. ;4000. ; 2000. ; m
+ height  = 1000. ;4000. ; 2000. ; m
  colors  = (/"lightpink3","forestgreen","steelblue","gray20","gray"/)
  dashs   = (/0,0,0,0,0/)
  snf      = 33 ;18+15    ;midnight+15 hrs
@@ -123,7 +123,7 @@ begin
 
   plot = new(4,"graphic")
 
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "Figure_airmass_" + sprinti("%0.2i",nf)
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -166,12 +166,13 @@ begin
  res@cnFillOpacityF          = 0.5
  res@cnInfoLabelFontColor    = "grey"
  ;res@cnLevels                = (/0.05,0.1,0.5,1.0,5.0,10.,50.,100.,500.,1000.,1500.,2000./)
- res@cnLevels = (/0.05,   \
-                  0.1, 0.2, 0.4, 0.6, 0.8, \
-                  1., 2., 4., 6., 8., \
-                  10., 20., 40., 60., 80., \
-                  100., 200., 400., 600., 800., \
-                  1000., 2000., 4000., 6000., 8000. /)
+; res@cnLevels = (/0.05,   \
+;                  0.1, 0.2, 0.4, 0.6, 0.8, \
+;                  1., 2., 4., 6., 8., \
+;                  10., 20., 40., 60., 80., \
+;                  100., 200., 400., 600., 800., \
+;                  1000., 2000., 4000., 6000., 8000. /)
+ res@cnLevels = ispan(100,2000,100)*1.0
  res@cnLineLabelsOn           = False
  res@cnInfoLabelOn           = False
 

@@ -10,12 +10,17 @@ load "$prom_root/functions/shade_terrain.ncl"
 load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
+load "$prom_root/functions/generateXY.ncl"
 
 begin
 ;STEP 1 User Settings
 ;-----------------------------------------------------------------------------------------
  ;opt       = 2   ;0-NX, 1-QX , 2-DX
  iz          = 34 ;34 (2km a.g.l.) ;21(low level) ; 47(mid level) , 41? ;model level to plot
+
+ fns         = 18
+ ix          = 191
+ xycorner    = (/-10, -10, 110, 110/)
 
  pname="EMPA2_PROM1";
  inst=6
@@ -36,15 +41,8 @@ begin
  ;;Extent for clipping :58 237
  ;;Extent for clipping :65 244
 
- lat_ext1  = 51.5
- lat_ext0 = 50.5
-
- ;SPP proposal
- ;insts     = (/5, -1, -1/)
- ;fns       = (/21,-1,-1/)
- ;ixs       = (/184,-1,-1/)
- ;lat_ext1  = (/51.6, -1, -1/)
- ;----
+ glon_idB    = 7.071663 ; Bonn Radar
+ glat_idB    = 50.73052 ;
 
  sfold       = "runE_" + inst + "_" + itype_gscp
  expname     = lnd + "_" + pname
@@ -90,7 +88,7 @@ begin
      scale_varh   = 1.E6   ; m to  um
      hydunits     = "um"
    else
-     qcnlevs      = ispan(100,1000,100)/1000.  ;m ;(/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
+     qcnlevs      = (/100,300,500,1000,3000,5000,7000,10000/)/1000.  ;m ;(/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
      scale_varh   = 1.E3   ; m to  mm
      hydunits     = "mm"
    end if
@@ -126,6 +124,10 @@ begin
  ;
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
  print("Processing ..." + fns + "  " + str_time)
+ ;
+ XYkm = generateXY(lat,lon,glat_idB,glon_idB)
+ Ykm  = XYkm(1,:,:)
+ Xkm  = XYkm(0,:,:)
 
 ;STEP 4 Prognostic state variables
 ;------------------------------------------------------------------------------
@@ -192,7 +194,7 @@ begin
  sdims         = dimsizes(spol)
  spol!0        = "Z"
  spol!1        = "Y"
- spol&Y        = lat(:,ixs) ; 
+ spol&Y        = Ykm(:,ixs) ; 
  xval2x        = conform_dims(sdims,spol&Y,1)*1.
  zval2x        = zmodel(:,:,ixs)
 
@@ -268,7 +270,7 @@ begin
  res@tiYAxisFont                = fncps_no
  res@tiXAxisFontHeightF         = fncps_hgt
  res@tiYAxisFontHeightF         = fncps_hgt
- res@tiXAxisString = "Latitude [~F34~0~F~N]"
+ res@tiXAxisString = "Y Range [km]" 
  res@tiYAxisString = "Height [km]"
 
  ;pm resources
@@ -283,8 +285,8 @@ begin
 
  ;tr resources
  ;--------------------
- res@trXMinF    = lat_ext0
- res@trXMaxF    = lat_ext1
+ res@trXMinF    = xycorner(0) 
+ res@trXMaxF    = xycorner(2)
  res@trYMaxF    = 15.
 
  ;For vector plots
@@ -326,20 +328,23 @@ begin
  ;;
  delete(reso@cnLevels)
  ;--------------------
- reso@cnLevels  = (/0.01,0.1,1.,2.,4./)
+ reso@cnLevels  = qcnlevs ;(/0.01,0.1,1.,2.,4./)
  reso@cnLineThicknessF = 2.0
- reso@cnLineColor = "black"
+ reso@cnLineColor = "grey20"
+ ;reso@cnLineDashPattern = 15
  ;QC
  spol          = (/varh(0,:,:,ixs)/)
  dumq(0)       = gsn_csm_contour(wks,spol,reso)
- ;QH
- spol          = (/varh(5,:,:,ixs)/)
+ ;QI
+ spol          = (/varh(2,:,:,ixs)/)
  dumq(3)       = gsn_csm_contour(wks,spol,reso)
  ;--------------------
  delete(reso@cnLevels)
 
  reso@cnLevels = (/0./)
  ;reso@tmXBLabelsOn  = True
+ reso@cnLineColor = "black"
+ reso@cnLineThicknessF = 3.
  do ic = 0,3
    dumt(ic)     = gsn_csm_contour(wks,tairC,reso)
  end do
@@ -363,10 +368,10 @@ begin
 ; end do
 
  delete(reso@cnLevels)
- reso@cnLineColor      = "black"
+ reso@cnLineColor      = "grey20"
  reso@cnLineThicknessF = 1.
  reso@tmXBLabelsOn  = False
- reso@cnLevels   = (/5.,40./) ;;SPP Proposal (/10., 20., 30.,40./) ;(/5.,40./)
+ reso@cnLevels   = (/5.,10.,20.,40./) ;;SPP Proposal (/10., 20., 30.,40./) ;(/5.,40./)
  reso@cnLineThicknessF  = 2.
  do ic = 0,3
    dumu(ic)     = gsn_csm_contour(wks,uz_yp,reso)
@@ -378,15 +383,20 @@ begin
      res@tiYAxisString = ""
      res@tmYLLabelsOn = False
    end if
-   res@gsnRightString = hydrometeors(ic+1) + " [" + hydunits + "]"
-   spol          = (/varh(ic+1,:,:,ixs)/)
+   if (ic.eq.0) then
+     res@gsnRightString = hydrometeors(ic+1) + " [" + hydunits + "]"
+     spol          = (/varh(ic+1,:,:,ixs)/)
+   else
+     res@gsnRightString = hydrometeors(ic+2) + " [" + hydunits + "]"
+     spol          = (/varh(ic+2,:,:,ixs)/)
+   end if
    plot(ic) = gsn_csm_contour(wks,spol,res)
    overlay(plot(ic),dumo(ic))
    if (ic.eq.3) then
      overlay(plot(ic),dumq(ic))   ;QH overlay
    end if
    overlay(plot(ic),dumt(ic))
-   if (ic.eq.2) then
+   if (ic.eq.1) then
      overlay(plot(ic),dumu(ic))
    end if
  end do
@@ -411,14 +421,15 @@ begin
  lgres@vpWidthF           = 0.20
  lgres@vpHeightF          = 0.15
  lgres@lgPerimOn          = False
+ lgres@lgLabelFontHeightF      = 0.15
  lbid1 = gsn_create_legend(wks,1,(/"W [ms~S~-1~N~]"/), lgres)
- lbid2 = gsn_create_legend(wks,1,(/hydrometeors(5) + " [" + hydunits + "]"/), lgres)
+ lbid2 = gsn_create_legend(wks,1,(/hydrometeors(2) + " [" + hydunits + "]"/), lgres)
 
  amres = True
  amres@amParallelPosF   = 0.2
  amres@amOrthogonalPosF = -0.45
-; annoid1 = gsn_add_annotation(plot(2),lbid1,amres)
-; annoid3 = gsn_add_annotation(plot(3),lbid2,amres)
+ annoid1 = gsn_add_annotation(plot(1),lbid1,amres)
+ annoid3 = gsn_add_annotation(plot(3),lbid2,amres)
 
 ; Add annotation
  txres               = True                      ; text mods desired
@@ -430,6 +441,6 @@ begin
  resP = True
  resP@gsnMaximize    = True
  resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
- resP@gsnPanelDebug = True
+; resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/1,4/), resP)
 end

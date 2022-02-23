@@ -14,11 +14,11 @@ begin
 
   ;
   cnames = (/"cloudfastautoconv","cloudstandard","cloud_nue1mue1","cloudslowautoconv", \
-            "cloudheike"/)
-  colors = (/"black", "red", "blue", "green","orange"/)
-  dpats  = (/0, 1, 2, 3, 4 /)
-  cmu   = (/0.   , 1./3., 1., 1./3., 6./)*1.d0
-  cnu   = (/1./3., 2./3., 1., 1.0, 1./3./)*1.d0
+            "cloudheike","cloudsepa"/)
+  colors = (/"black", "red", "blue", "green","orange","cyan"/)
+  dpats  = (/0, 1, 2, 3, 4, 5 /)
+  cmu   = (/0.   , 1./3., 1., 1./3., 6., 6./)*1.d0
+  cnu   = (/1./3., 2./3., 1., 1.0,  1./3, 1./)*1.d0
  
   ndim     = dimsizes(cnames)
   fdd      = dropSizeDistribution(qx,Nx,opt)
@@ -41,7 +41,7 @@ begin
   res@gsnLeftString    = "qx = " + qx + " gm~S~-3~N~,  Nx = " + Nx + " cm~S~-3~N~"
   res@trYLog           = True
   res@trYMinF          = 1.E-3
-  res@trYMaxF          = 1.E2                   
+  ;res@trYMaxF          = 1.E2                   
 
   res@tmXTOn           = False
   res@tmYROn           = False

@@ -11,6 +11,9 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
+ thr_lwp     = 0.5 ;g/m2 (spatial average over storm mask)
+ iz_start    = 44  ;
+
  pid         = 3 
  ;inst        = 6
  lnd         = "HET"
@@ -83,6 +86,7 @@ begin
  ntime    = et - st + 1
 
  print("st : " + st + " et: " + et)
+ smskc = smsk(:, nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
 
 ;-----------------------------------------------------------------------------------------
 ; READ NC FILES
@@ -94,26 +98,12 @@ begin
 
  if (nf.eq.st) then
    ;Initialize variables
-   iwv           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
-   iwv@lat2d     = lat2d
-   iwv@lon2d     = lon2d
-   iwv@long_name = "Precipitable Water"   ;or water vapor
-   iwv@units     = "mm"
-   iwv@_FillValue = -999.
-   iwv           = iwv@_FillValue
+   cth           = new((/nf_cos,ndimc(1),ndimc(2)/),"float")
+   cth@units     = "m"
+   cth@_FillValue = -999.
 
-   lwp           = iwv
-   lwp@long_name = "Liquid Water Path"
-
-   iwp           = iwv
-   iwp@long_name = "Ice Water Path" 
-   lwp       = 0.
-   iwp       = 0.
-   iwv       = 0.
-  
-   slwp      = lwp
-   slwp@long_name = "Supercooled Liquid Water Path"
-
+   twp           = new((/ndimc(1),ndimc(2)/),"float")
+   twp@_FillValue = -999.
  end if
 
  filC    = addfile(fils_cos(nf),"r")
@@ -135,18 +125,20 @@ begin
  qcd     = qc*0.  ; dummy, 
  rhoa    = calcrho_cos_nclf(t,p,qv,qcd,qrs)   ;air density kg/m3
 
- do iz = 0, ndimc(0)-2
-   iwv(nf,:,:) = iwv(nf,:,:) + rhoa(iz,:,:)*qv  (iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm  
-   lwp(nf,:,:) = lwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
-   iwp(nf,:,:) = iwp(nf,:,:) + rhoa(iz,:,:)*qice(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
+ do iz = iz_start, ndimc(0)-2
+   twp = rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))  + \  ;kg/m2 or mm
+            rhoa(iz,:,:)*qice(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:))    ;kg/m2 or mm
+   twp = where(smskc(nf,:,:).eq.1,twp,twp@_FillValue)
+   twp_avg = avg(twp)*1000.  ;g/m2
 
-   ;Supercooled LWP, use model level with >99% of domain having temperature less than 0 degrees C
-   t1d = ndtooned(t(iz,:,:))-273.14
-   sval = dimsizes(ind(t1d.le.0.))*1./(dimsizes(t1d)*1.)
-   if (sval.gt.0.99) then
-     slwp(nf,:,:) = slwp(nf,:,:) + rhoa(iz,:,:)*qliq(iz,:,:)*(hhl(iz+1,:,:)-hhl(iz,:,:)) 
+   ;print(iz + " " + twp_avg)
+
+   if (twp_avg.lt.thr_lwp) then
+     zmod = zmodel(iz,:,:) - topo
+     cth(nf,:,:) = where(smskc(nf,:,:).eq.1,zmod,cth@_FillValue) 
+     print(iz + " " + twp_avg + " " + avg(zmod) + " m")
+     break 
    end if
-   
  end do
 
  print("Processing " + nf + "..." )
@@ -322,19 +314,11 @@ begin
 
  ;Crop smask
  smskc = smsk(:, nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
- lwpx   = where(smskc.eq.1, lwp,lwp@_FillValue)
- iwpx   = where(smskc.eq.1, iwp,iwp@_FillValue)
- slwpx  = where(smskc.eq.1, slwp,slwp@_FillValue)
+ cthx  = where(smskc.eq.1, cth,cth@_FillValue)
 
- fname = "LWP_" + pname + "_" + sfold + ".nc"
+ fname = "CTH_" + pname + "_" + sfold + ".nc"
  system("rm " + fname)
  fout = addfile(fname,"c")
- fout->IWV = iwv
-; fout->LWP = lwp
-; fout->IWP = iwp
- fout->LWP = lwpx
- fout->IWP = iwpx
- fout->SLWP = slwpx
-; fout->smsk = smskc
+ fout->CTH = cthx
 
 end

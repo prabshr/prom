@@ -21,7 +21,7 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
   pname = "EMPA2_PROM1";
-  einst = (/5,6,7,8,9/)
+  einst = (/7/)
   lnd   = "HET"
   itype = "ART"
   diri  = "/p/largedata/hbn33/shrestha1/"
@@ -32,7 +32,7 @@ begin
   height      = 2000 ;m a.msl
   glon_idB    = 7.071663 + 13*0.01  ; Bonn Radar
   glat_idB    = 50.73052
-  fprcs       = False ;True ; Process or read processed data
+  fprcs       = True ; Process or read processed data
   namemods   = (/"nuc./acc. (pure + mixed)", "soot + coarse", \
                  "dust", "sea-salt"/)
 
@@ -47,8 +47,8 @@ begin
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
 
-  diri_cos    = diri + "/" + subevent + "/a_cosout/"
-  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/aiop_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/aiop_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -166,7 +166,7 @@ begin
   dum  = new(4,"graphic")
 
 
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "Figure_aerosol_diurnal_" + height
   wks = gsn_open_wks(wks_type,fname_out)
 

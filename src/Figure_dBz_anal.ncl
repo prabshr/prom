@@ -67,7 +67,7 @@ begin
    diri    = "/daten/daten04/pshrestha/shared-data/bonnRadar_20150705"
    diri    = "/p/largedata/hbn33/shrestha1/"
    fns     = 18 ;18 ;40 ;12
-   fne     = 18 ;33 ;18; 48
+   fne     = 18;25 ;33 ;18; 48
    dns     = 0 ;12 ; offset for dbz files
  end if
  end if
@@ -91,7 +91,7 @@ begin
  uzmask      = False
  scale_uz    = 1.0
  hmax        = 15.0        ;km
- fpressure   = 550. ;350.   ;hPa, for pressure plot
+ fpressure   = 500. ;350.   ;hPa, for pressure plot
 
  mpcorner    = (/glat_idB(0)-ext(0),glon_idB(0)-ext(1),glat_idB(0)+ext(0),glon_idB(0)+ext(1)/)
  
@@ -111,6 +111,7 @@ begin
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
+
  diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
  dataFillVal    = -999        ;Polarimetric flags
 
@@ -588,7 +589,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 

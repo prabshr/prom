@@ -24,16 +24,18 @@ function data_extract(diri,opt)
   return(data)
 end
 
+;Main Code
+
 begin
   diri1 = "$PROM/scratch/data_prom1/"
   diri2 = "$PROM/scratch/CAF/"
  
   ; Read processed synthetic data PROM1,2,3, st= start times, 14, 9.59, 11 UTC, nt = 5 min interval
-  opt = True
-  opt@inst = 6      ;ens no
-  opt@nt   = 5    ;data interval , mins
-  opt@sthr = 14   ;start hour
-  opt@lnd  = "HET"
+  opt       = True
+  opt@inst  = 6      ;ens no
+  opt@nt    = 5    ;data interval , mins
+  opt@sthr  = 14   ;start hour
+  opt@lnd   = "HET"
   opt@itype = "ART"
   opt@pname = "EMPA2_PROM1"
 
@@ -56,7 +58,7 @@ begin
 ;  colors = (/"red","red","red","red","red","red","red","red","red"/) ;, \
 ;             ;    "blue","blue","blue","blue","blue","blue","blue","blue","blue", \
 ;             ;    "green","green","green","green","green","green","green","green","green"/)
-  colors = (/"orchid3","yellow3","grey20","orchid3","yellow3","grey20","orchid3","yellow3","grey20"/)
+;  colors = (/"orchid3","yellow3","grey20","orchid3","yellow3","grey20","orchid3","yellow3","grey20"/)
 ;
 ;  dpats  = (/0,0,0,0,0,0,0,0,0/) ;, \
 ;            ; 0,0,0,0,0,0,0,0,0, \
@@ -68,22 +70,24 @@ begin
 ;
 
    einst = (/5,6,7,8,9/)
-
-;  nprf  = dimsizes(itypes)
-  nprf = dimsizes(einst) 
+   itypes = (/"ART","ART_HC","ART_BD"/)
+   colors = (/"red","blue","green"/)
+  nprf  = dimsizes(itypes)
+;  nprf = dimsizes(einst) 
   data = new((/nprf,ndim/),"float")
 
   do ip = 0, nprf-1
-   ; opt@itype = itypes(ip)
+    opt@itype = itypes(ip)
    ; opt@lnd = lnds(ip)
-    opt@inst = einst(ip)
+   ; opt@inst = einst(ip)
+   ;opt@pname = pnames(ip)
     data(ip,:) = data_extract(diri2 ,opt)
   end do
   ;opt@ver = 1
   ;data2 = data_extract(diri1 ,opt)
 
 
-  wks_type = "png"
+  wks_type = "x11"
   fname_out = "Figure_caf_revised"
   wks = gsn_open_wks(wks_type,fname_out)
 
@@ -92,8 +96,8 @@ begin
   res@gsnFrame = False
 
   res@xyLineThicknessF           = 3.
-  ;res@xyLineColors  = colors
-  ;res@xyDashPatterns = dpats
+  res@xyLineColors  = colors
+  res@xyDashPatterns = dpats
 
   res@xyDashPattern = 0
   res@xyLineColor = "lightpink3"
@@ -109,23 +113,38 @@ begin
   res@trYMaxF  = 0.6
   res@trXMaxF  = 16.5
   res@vpWidthF = 0.7
-;PROM1 ------------
+
+  data_avg = dim_avg_n(data,0)
+
   plot                        = gsn_csm_xy (wks,data&time,data,res) ; create plot
 
 ; Obs
  delete(res@xyLineColors)
    ; Obs
-  delete(res@xyLineColors)
-  res@xyLineColor                = "black"
-  dum1      = gsn_csm_xy (wks,tobs1,data1,res) ; create plot
+ delete(res@xyLineColors)
+ res@xyLineColor = "black"
+ dum_avg = gsn_csm_xy (wks,data&time,data_avg,res)
+  overlay(plot,dum_avg)
 
+ res@xyLineColor                = "black"
+ dum1      = gsn_csm_xy (wks,tobs1,data1,res) ; create plot
+ res@xyLineColor                = "black"
+ res@xyDashPattern = 1
+ dum2      = gsn_csm_xy (wks,tobs2,data2,res) ; create plot
 
-  res@xyLineColor                = "black"
-  res@xyDashPattern = 1
-  dum2      = gsn_csm_xy (wks,tobs2,data2,res) ; create plot
+ overlay(plot,dum1)
+ overlay(plot,dum2)
 
-  overlay(plot,dum1)
-  overlay(plot,dum2)
+;  
+  xval = (/15.5,15.5/)
+  yval = (/0, 1.0/)
+  gres = True
+  duml1 = gsn_add_polyline(wks,plot,xval,yval,gres)
+  xval = (/14.+45./60.,14. + 45./60./)
+  yval = (/0, 1.0/)
+  gres = True
+  duml2 = gsn_add_polyline(wks,plot,xval,yval,gres)
+
 
   draw(plot)
   frame(wks)
