@@ -17,7 +17,7 @@ begin
   snf       = 33 ;18+15    ;midnighti + 15
   sid      = 0     ;used INT2lM-MOZART with ldust = True
   ;;
-  thr_perc = 1.0  ;Threshold percentage to plot
+  thr_perc = 0.1 ;1.0  ;Threshold percentage to plot
   glon_idB = 7.071663 + 13*0.01 ; Bonn Radar
   glat_idB = 50.73052
   nbdl     = 0
@@ -98,7 +98,7 @@ begin
      pcRes@gsMarkerSizeF   = 0.015;
      plot    = new(nlevs,"graphic")
      figname = "Figure_pm25_"+nf
-     wks     = gsn_open_wks("png", figname)               ; send graphics to PNG file
+     wks     = gsn_open_wks("x11", figname)               ; send graphics to PNG file
    end if
    pcRes@tiMainString    = "PM2.5 at " + heights(ip) + " m : " + pm25_str + " [" + pm25_v@units + "]"
    plot(ip)    = pie_chart(wks, percent_f, names_f, colors_f, pcRes)

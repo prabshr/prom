@@ -27,10 +27,10 @@ begin
 ;-----------------------------------------------------------------------------------------
 
  ;;MODEL OUTPUT
- pname = "PROM1";
+ pname = "EMPA2_PROM1";
  inst  = 6
  lnd   = "HET"
- itype = "2483"
+ itype = "ART"
  diri  = "/p/largedata/hbn33/shrestha1/"
  ;diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705/"
 
@@ -48,7 +48,7 @@ begin
  glon_id = (/7.071663, 7.00/) ;
  glat_id = (/50.73052, 50.6/) ;
  gmarker = (/10,9/)
- varname = "TOT_PREC" ;;"HAIL_GSP" ;"TOT_PREC" ; 
+ varname = "TOT_PREC" ;"HAIL_GSP" ;"TOT_PREC" ; 
  varminmax = (/0, 30, 5/) 
 
 ;-----------------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ begin
  ndimc      = dimsizes(lat2d)
 
  mpcorner      = (/lat2d(0,0),lon2d(0,0),lat2d(ndimc(0)-1,0),lon2d(0,ndimc(1)-1)/)
-
+ mpcorner      = (/50.5, 6., 51.5, 8./)
 ;-----------------------------------------------------------------------------------------
 ; READ NC FILES 
 ;-----------------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ begin
  nf_cos   = dimsizes(fils_cos)
 
 ;Read specified variables
- filindex = ispan(32,nf_cos-1,1)
+ filindex = ispan(1,nf_cos-1,1)
  nf_ctr = dimsizes(filindex)
 
  varout = new((/nf_ctr, ndimc(0),ndimc(1)/),float)
@@ -130,12 +130,12 @@ begin
 ;-----------------------------------------------------------------------------------------
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
- fname_out = "Figure_rain_"+ expname + "_"+sprinti("%0.2i",inst)
+ fname_out = "Figure_rain_"+ expname + "_"+sprinti("%0.2i", fn)
  fncps_no = ":F21:"
  fncps_no = 21
  fncps_hgt = 0.028
 
- wks_type                 = "x11"
+ wks_type                 = "png"
  wks = gsn_open_wks(wks_type,fname_out)
  gsn_define_colormap(wks,"precip2_17lev")
 

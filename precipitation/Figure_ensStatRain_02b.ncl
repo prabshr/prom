@@ -34,7 +34,7 @@ begin
  diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_EMPA2_prom1/" 
  fstat       = 1
  diri        = "./data_EMPA2_prom" + expid
- prefx       = "accprecip_HETART"
+ prefx       = "accprecip_HETART_SP4"
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -104,7 +104,7 @@ begin
 ; Plotting Resource
 ;-----------------------------------------------------------------------------------------
  ;fname_out = "Figure_rain_"+ itype_gscp + "_" + fstat 
- fname_out = "rain_ensemble_" + fstat + "_" + expid
+ fname_out = "rain_ensemble_" + prefx + "_" + expid
  fncps_no = ":F21:"
  fncps_no = 21
  fncps_hgt = 0.02 ;8

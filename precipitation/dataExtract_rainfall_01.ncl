@@ -35,7 +35,7 @@ begin
  ;expid= 1,2,3   ;for RADOLAN
  pname = "EMPA2_PROM1";
  lnd   = "HET"
- itype = "ART_BD"
+ itype = "ART_TURSP4"
  itype_gscp  = lnd + itype
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"

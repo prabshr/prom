@@ -1,4 +1,6 @@
 ;Extract aerosol for model comparison with observations
+;Cloud screening added to the aerosol optical depth extraction
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
 
 begin
 
@@ -11,7 +13,7 @@ begin
  itype = "ART"
  diri  = "/p/largedata/hbn33/shrestha1/"
  vid   = 3   ;Variable ID
- sid   = 1   ;Station ID
+ sid   = 2   ;Station ID
 
 ;Tracer
  varnames = (/"NO2","HCHO", "VSOILA0", "TAU"/)
@@ -54,6 +56,8 @@ begin
  ny        = ndimhhl(1)
  nx        = ndimhhl(2)
 
+ dz3d      = hhl(1:nz,:,:) - hhl(0:nz-1,:,:)
+
  fils_cos  = systemfunc("ls " + diri_cos + "lf*")
  nf_cos    = dimsizes(fils_cos)-1
 
@@ -81,8 +85,30 @@ begin
               nc_cos->TAU_DUST_A(0,::-1,:,:) + \
                 nc_cos->TAU_SEAS_A(0,::-1,:,:)
      tracersum  = dim_sum_n(tracer3d,0)
-     tracer(ic,fn) = tracersum(iys,ixs)
+     ;Cloud Screening
+     ;-----------------------------------------------------------------------
+     ; Compute ambient air density
+     tair          = nc_cos->T(0,::-1,iys,ixs)   ;K
+     pressure      = nc_cos->P(0,::-1,iys,ixs)   ;Pa
+     qc            = nc_cos->QC(0,::-1,iys,ixs)    ;kg/kg
+     qr            = nc_cos->QR(0,::-1,iys,ixs)    ;kg/kg
+     qi            = nc_cos->QI(0,::-1,iys,ixs)    ;kg/kg
+     qs            = nc_cos->QS(0,::-1,iys,ixs)    ;kg/kg
+     qg            = nc_cos->QG(0,::-1,iys,ixs)    ;kg/kg
+     qh            = nc_cos->QH(0,::-1,iys,ixs)    ;kg/kg
+     qv            = nc_cos->QV(0,::-1,iys,ixs)    ;kg/kg
+     tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+     rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
 
+     tlc           = (tlc + qc )*rho * dz3d(:,iys,ixs) * 1000.  ;g/m2
+     cloud = dim_sum_n(tlc,0)
+     tracer@_FillValue = -999.
+     thrc   = 20.  ;g/m2
+     if (cloud.gt.thrc) then
+       tracer(ic,fn) = tracer@_FillValue
+     else
+       tracer(ic,fn) = tracersum(iys,ixs)
+     end if
      copy_VarAtts(tracer3d,tracer)
      tracer@long_name = "AOD at 550 nm"
      tracer@units     = "-"

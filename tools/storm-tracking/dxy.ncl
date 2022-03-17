@@ -4,13 +4,13 @@ begin
 ;--User Settings --------------------------------------------------
   pid       = 3            ;Experiment ID
   lnd       = "HET"
-  itype     = "ART_BD"
+  itype     = "ART_SP4"
   ;inst    = 8
 
   ;First cell
   t  = 0   ;14 
-  iy = 136; 128 
-  ix = 134 ;157
+  iy = 120; 128 
+  ix = 150 ;157
 
   ;Search box size
   bs = 40

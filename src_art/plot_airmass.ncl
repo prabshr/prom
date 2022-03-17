@@ -13,7 +13,7 @@ begin
 ;#1 USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  pname = "EMPA2_PROM1";
- inst  = 7 
+ inst  = 6 
  lnd   = "HET"
  itype = "ART"
  diri  = "/p/largedata/hbn33/shrestha1/"
@@ -33,8 +33,8 @@ begin
   sfold       = "runE_" + inst + "_" + itype_gscp
   expname     = lnd + "_" + pname
   subevent    = expname + "/" + itype_gscp + "/" + sfold
-  diri_cos    = diri + "/" + subevent + "/aiop_cosout/"
-  diri_cosI   = diri + "/" + subevent + "/aiop_cosout/ivr/"
+  diri_cos    = diri + "/" + subevent + "/a_cosout/"
+  diri_cosI   = diri + "/" + subevent + "/a_cosout/ivr/"
 
   fils_cos = systemfunc("ls " + diri_cos + "*.nc")
 
@@ -166,13 +166,13 @@ begin
  res@cnFillOpacityF          = 0.5
  res@cnInfoLabelFontColor    = "grey"
  ;res@cnLevels                = (/0.05,0.1,0.5,1.0,5.0,10.,50.,100.,500.,1000.,1500.,2000./)
-; res@cnLevels = (/0.05,   \
-;                  0.1, 0.2, 0.4, 0.6, 0.8, \
-;                  1., 2., 4., 6., 8., \
-;                  10., 20., 40., 60., 80., \
-;                  100., 200., 400., 600., 800., \
-;                  1000., 2000., 4000., 6000., 8000. /)
- res@cnLevels = ispan(100,2000,100)*1.0
+ res@cnLevels = (/0.05,   \
+                  0.1, 0.2, 0.4, 0.6, 0.8, \
+                  1., 2., 4., 6., 8., \
+                  10., 20., 40., 60., 80., \
+                  100., 200., 400., 600., 800., \
+                  1000., 2000., 4000., 6000., 8000. /)
+; res@cnLevels = ispan(100,2000,100)*1.0
  res@cnLineLabelsOn           = False
  res@cnInfoLabelOn           = False
 

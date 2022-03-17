@@ -64,7 +64,7 @@ begin
 
    date_str =  sprinti("%0.4i", year) + "/" + sprinti("%0.2i", month) +"/"+sprinti("%0.2i", day) + \
                "  " + sprinti("%0.2i", hour) + sprinti("%0.2i", minute) + " UTC"
-
+   print("Processing ART data " + date_str)
 ;Do not touch below
 ;---------------------------------------------------------------------------------
   if (favg) then

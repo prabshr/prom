@@ -11,6 +11,7 @@ load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/calcrho_cos_nclf.ncl"
 load "$prom_root/functions/convol.ncl"
 load "$prom_root/functions/generateXY.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/shea_util.ncl"
 
 begin
 ;STEP 1 User Settings
@@ -18,9 +19,11 @@ begin
  ;opt       = 2   ;0-NX, 1-QX , 2-DX
  iz          = 34 ;34 (2km a.g.l.) ;21(low level) ; 47(mid level) , 41? ;model level to plot
 
- fns         = 18
- ix          = 191
+; fns         = 12  ;18
+; XR          = 7; 41 ; km
+; ixs         = 186 ;191 hail ZDR 
  xycorner    = (/-10, -10, 110, 110/)
+ xycorner    = (/0, 0, 50, 50/)
 
  pname="EMPA2_PROM1";
  inst=6
@@ -63,8 +66,8 @@ begin
      qcnlevs      = ispan(100,5000,500) ;(/1.1, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E7/)
      hydunits     = "cm~S~-3~N~"
    else
-     scale_varh   = 1/1.E3
-     qcnlevs      = ispan(100,1000,100); (/1.1, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E7/)
+     scale_varh   = 1. ;1/1.E3
+     qcnlevs      = ispan(100,1000,100)/100.; (/1.1, 1.E1, 1.E2, 1.E3, 1.E4, 1.E5, 1.E6, 1.E7/)
      hydunits     = "L~S~-1~N~"
    end if
    hydname      = "Number Concentration"
@@ -88,7 +91,7 @@ begin
      scale_varh   = 1.E6   ; m to  um
      hydunits     = "um"
    else
-     qcnlevs      = (/100,300,500,1000,3000,5000,7000,10000/)/1000.  ;m ;(/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
+     qcnlevs      = (/100,300,500,1000,3000,5000,7000,10000, 13000/)/1000.  ;m ;(/0.001, 0.1, 1.0, 5.0, 10., 15., 20., 25., 30./)
      scale_varh   = 1.E3   ; m to  mm
      hydunits     = "mm"
    end if
@@ -128,6 +131,10 @@ begin
  XYkm = generateXY(lat,lon,glat_idB,glon_idB)
  Ykm  = XYkm(1,:,:)
  Xkm  = XYkm(0,:,:)
+
+ ;
+ ixs = closest_val(XR,Xkm(150,:))
+ print("Cross-section through " + XR + " km " + ixs)
 
 ;STEP 4 Prognostic state variables
 ;------------------------------------------------------------------------------
@@ -233,7 +240,8 @@ begin
  dumu     = new(4,"graphic")
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_QX_rhi_"+opt)
+ figname  = "Figure_QX_rhi_" + pname + "_" + itype_gscp + "_t" + fns + "_" +  opt 
+ wks      = gsn_open_wks("x11", figname)
 
  cmap = read_colormap_file("cmp_flux")
  cmap(0,:) = (/1., 1., 1., 1./)
@@ -272,6 +280,8 @@ begin
  res@tiYAxisFontHeightF         = fncps_hgt
  res@tiXAxisString = "Y Range [km]" 
  res@tiYAxisString = "Height [km]"
+
+ pres = res
 
  ;pm resources
  ;--------------------
@@ -376,7 +386,71 @@ begin
  do ic = 0,3
    dumu(ic)     = gsn_csm_contour(wks,uz_yp,reso)
  end do
- 
+
+ fdebug = True 
+ if (fdebug) then
+   print("Generating debug plots ..")
+
+   ;Read storm mask ------------------------------------------------------------------
+   fsname   = "smask_" + pname + "_" + sfold + ".nc"
+   diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
+
+   nc_spath = addfile(diri_spath + "/" + fsname,"r")
+   smsk     = nc_spath->Band1(fns,:,:)
+
+   delete(smsk)
+   smsk     = wrf_user_intrp3d(varh(qx,:,:,:),zmodel,"h",zheight,0.,False)
+
+   smsk!0   = "Y"
+   smsk!1   = "X"
+   smsk&Y        = Ykm(:,150) ;
+   smsk&X        = Xkm(150,:) ;
+
+   res@gsnRightString = hydrometeors(qx) + " [" + hydunits + "]"
+   delete(spol)
+   ;zheight       = 5.0 ;km
+   spol          = wrf_user_intrp3d(uz_hhl,zmodel,"h",zheight,0.,False)
+   spol!0        = "Y"
+   spol!1        = "X"
+   spol&Y        = Ykm(:,150) ;
+   spol&X        = Xkm(150,:) ;
+
+   ;tr Resources
+   ;-----------------------------
+   pres@trXMinF = xycorner(1)
+   pres@trYMinF = xycorner(0)
+   pres@trXMaxF = xycorner(3)
+   pres@trYMaxF = xycorner(2)
+   pres@gsnLeftString = "Height : " + zheight + " km"
+
+   pres@cnFillOn = True
+   pres@cnFillPalette              = cmap
+   pres@cnLevelSelectionMode       = "ExplicitLevels"
+   pres@cnLevels = qcnlevs 
+   pres@lbOrientation              = "vertical" 
+
+   plot(0) = gsn_csm_contour(wks,smsk,pres)
+   delete(pres@cnLevels)
+   pres@cnFillOn = False
+   pres@cnLineThicknessF = 3.0
+   pres@cnLineDashPattern = 1
+   pres@cnLevels = (/-3.,-2.,-1.,-0.5, 5.,10.,15.,20.,25.,30.,35.,40./)
+   dumw = gsn_csm_contour(wks,spol,pres)
+   dumw = ColorNegDashZeroPosContour(dumw,"blue","gray","red")
+   overlay(plot(0),dumw)
+
+   gres                  = True
+   gres@gsLineColor      = "black"
+   gres@gsLineDashPattern = 0
+   gres@gsLineThicknessF = 3.0
+
+   ypoly_cs = (/xycorner(0),xycorner(2)/)
+   xpoly_cs = (/Xkm(0,ixs),Xkm(0,ixs)/)
+   dum_cs = gsn_add_polyline(wks,plot(0),xpoly_cs,ypoly_cs,gres)
+
+   draw(plot(0))
+   frame(wks)
+ else
  ;Plot and  Overlay
  do ic = 0,3
    if (ic.gt.0) then
@@ -443,4 +517,7 @@ begin
  resP@gsnPanelXF = (/-1,0.26,0.46,.66/)  ;for 4 columns
 ; resP@gsnPanelDebug = True
  gsn_panel(wks,plot,(/1,4/), resP)
+
+ end if
+
 end

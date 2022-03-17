@@ -351,7 +351,7 @@ begin
   ;----------------------------------------------------------------------
   pid       = 3            ;Experiment ID
   lnd       = "HET"
-  itype     = "ART_BD"
+  itype     = "ART_SP4"
   ;inst     = 8
   ;bopt = False
   ;bopt@bdr = False

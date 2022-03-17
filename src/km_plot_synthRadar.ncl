@@ -22,15 +22,17 @@ begin
  inst=6
  readBPRO = False ;True    ;
  lnd = "HET"
- itype = "ART"
+ itype = "ART"  ;"ART"
  itype_gscp  = lnd + itype
 
  ;
- fn          = 18
- ix          = 191
- izlevs      = (/25, 44, 54/)
+ fn          = 12   ;18
+ XR          = 7    ;41  km
+ ;ix          = 186 ;191 ZDR From hail
+ izlevs      = (/25, 50, 54/) ;i(/25, 44, 54/)
                 ;y1 x1 y2   x2
  xycorner    = (/-10, -10, 110, 110/)
+ xycorner    = (/-10, -10, 80, 80/)
  ;
 
  diri        = "/p/largedata/hbn33/shrestha1/"
@@ -42,6 +44,13 @@ begin
  diri_cosI   = diri + "/" + "/" + subevent + "/cosout/ivr/"
  ;diri_dBz    = "/daten04/pshrestha/shared-data/bonnRadar_" + ydate + "/Synth/HET2483_" + inst +"/"
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
+
+; for FO sensitivity study
+;  itype_gscp  = lnd + "ART"
+; sfold       = "runE_" + inst + "_" + itype_gscp
+; expname     = lnd + "_" + pname 
+; subevent    = expname + "/" + itype_gscp + "/" + sfold
+
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
  diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
  dataFillVal    = -999        ;Polarimetric flags
@@ -79,6 +88,9 @@ begin
  Ykm  = XYkm(1,:,:)
  Xkm  = XYkm(0,:,:)
 
+ ;Obtain location of C-s
+ ix   = closest_val(XR,Xkm(0,:))
+ print("XRange " + XR + " km " + ix)
  ;----------------------------------------------------
  npol          = dimsizes(pvars)
  nzp            = dimsizes(izlevs)
@@ -202,7 +214,8 @@ begin
 
 
  res      = True
- wks      = gsn_open_wks("x11", "Figure_case_i" + inst + "_t" + fn + "_ix" + ix)
+ figname  = "Figure_synth_I" + inst + "_" + pname + "_" + itype_gscp + "_t" + fn 
+ wks      = gsn_open_wks("x11", figname)
 
  colors   = load_radarColors(0)
 
@@ -439,7 +452,7 @@ begin
 
       res3@lbOrientation = "Vertical"
 
-      res3@tiXAxisString = "Y Range [km]" ;"Latitude [~F34~0~F~N]"
+      res3@tiXAxisString = "" ;"Y Range [km]" ;"Latitude [~F34~0~F~N]"
       if (ipol.eq.0) then
         res3@tmYLLabelsOn = True
         res3@tiYAxisString = "Height [km]"
@@ -492,7 +505,11 @@ begin
  resP@gsnPanelXF = (/-1,0.26,0.46,.66,-1,0.26,0.46,.66,-1,0.26,0.46,.66/)  ;for 4 columns  
  resP@gsnPanelYF = (/-1,-1,-1,-1,0.61,0.61,0.61,0.61,0.35,0.35,0.35,0.35/)
 
- resP@gsnPanelDebug = True
- gsn_panel(wks,plot,(/nzp,npol/), resP)
-
+ fdebug =False 
+ if (fdebug) then
+    gsn_panel(wks,(/plot(5),plot(9)/),(/1,2/),False)
+ else
+   ;resP@gsnPanelDebug = True
+   gsn_panel(wks,plot,(/nzp,npol/), resP)
+ end if
 end

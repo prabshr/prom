@@ -47,6 +47,10 @@ begin
  itype = "ART"
  itype_gscp  = lnd + itype
 
+ offs = -0.
+ Ipangle = 0.
+ ipol = 0
+
  if (prom.eq.1) then
    diri     = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
    fns      = 16 ;26 ;21 ; 16 ; 21 ;10
@@ -112,6 +116,12 @@ begin
  diri_dBz    = diri + "/Synth/" + itype_gscp +"_" + inst+"/"
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + sfold
 
+ ;CPS
+ itype_gscp  = "HETART"
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+ ;CPS
  diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
  dataFillVal    = -999        ;Polarimetric flags
 
@@ -589,7 +599,7 @@ begin
 ;#12  Plotting Resource
 ;-----------------------------------------------------------------------------------------
   plot = new(3,graphic)
-  wks_type = "x11"
+  wks_type = "png"
   fname_out = "dbz_prom_"+ prom + "_" +  itype_gscp + "_inst" + inst + "_ipol_" + ipol + "_" +  sprinti("%0.4i",fn)
   wks = gsn_open_wks(wks_type,fname_out)
 

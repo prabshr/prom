@@ -6,6 +6,7 @@ load "$prom_root/functions/shapefile_utils.ncl"
 load "$prom_root/functions/cosmo_time_nclf.ncl"
 load "$prom_root/functions/extract_atmwater_nclf.ncl"
 load "$prom_root/functions/vtc_nclf.ncl"
+load "$prom_root/functions/calcrho_cos_nclf.ncl"
 
 ;Plot either AP tracers or vertically integrated water
 
@@ -77,8 +78,9 @@ begin
  ny        = ndimhhl(1)
  nx        = ndimhhl(2)
 
- ;Crop topography,height and geo-reference
+;Crop topography,height and geo-reference
  hhlc        = hhl(:,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+ dz          = hhlc(1:nz,:,:) - hhlc(0:nz-1,:,:)
  topoc       = topo(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
  topoc@lat2d = lat2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
  topoc@lon2d = lon2d(nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
@@ -92,6 +94,7 @@ begin
  time      = nc_cos->time
  ;
  str_time  = cosmo_time_nclf(time,1)  ; 0 for date
+ print(" " + fils_cos(fn))
  print("Processing ..." + fn + "  " + str_time)
 
  if (fvtc) then
@@ -110,6 +113,7 @@ begin
      tracer3d = nc_cos->TAU_AERO_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1) + \
                 nc_cos->TAU_DUST_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1) + \
                 nc_cos->TAU_SEAS_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
+     tracer3d = nc_cos->TAU_DUST_A(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)
      tracer   = dim_sum_n(tracer3d,0)
      tracer@long_name = "AOD at 550 nm"
      tracer@units     = "-"
@@ -129,6 +133,27 @@ begin
 
  vmin = min(tracer)
  vmax = max(tracer)
+
+;Cloud Screening
+;-----------------------------------------------------------------------
+ ; Compute ambient air density
+ tair          = nc_cos->T(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)   ;K
+ pressure      = nc_cos->P(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)   ;Pa
+ qc            = nc_cos->QC(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qr            = nc_cos->QR(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qi            = nc_cos->QI(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qs            = nc_cos->QS(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qg            = nc_cos->QG(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qh            = nc_cos->QH(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ qv            = nc_cos->QV(0,::-1,nbdl:ny-nbdl-1,nbdl:nx-nbdl-1)    ;kg/kg
+ tlc           = qr + qi + qs + qg + qh    ;Precipitation loading
+ rho           = calcrho_cos_nclf(tair,pressure,qv,qc,tlc) ;air density (kgm-3)
+
+ tlc           = (tlc + qc )*rho * dz * 1000.  ;g/m2
+ cloud = dim_sum_n(tlc,0)
+ tracer@_FillValue = -999.
+ thrc   = 20.  ;g/m2
+ tracer = where(cloud.gt.thrc,tracer@_FillValue,tracer)
 
 ;Need to read shape file and convert rotated grids into geographical grids
 ;-----------------------------------------------------------------------
@@ -294,7 +319,7 @@ begin
    cres@cnLevels                = (/0.05,0.1,0.3,0.5,1.,3.,5.,10.,13.,15.,20./)
 
  else if (vid.eq.3) then
-   cres@cnLevels                = ispan(1,10,1)*0.1
+   cres@cnLevels                = ispan(1,10,1)*0.01
  else
    cres@cnLevels                = fspan(vmin,vmax,10) ;ispan(1,10,1)*0.1  ;fspan(vmin,vmax,20)
  end if

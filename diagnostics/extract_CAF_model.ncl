@@ -15,7 +15,7 @@ begin
 ;User Settings ---------------------------------------------------------------
  pid         = 3 
  lnd         = "HET"
- itype       = "ART_BD"
+ itype       = "ART_SP4"
  ;inst        = 6 
  iz          = 34 ;21(low level) ; 47(mid level) , 41? ;model level to plot
  dbz_th      = 40.  ;dBZ

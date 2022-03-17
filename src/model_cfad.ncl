@@ -20,11 +20,12 @@ load "$PROM/functions/cfads.ncl"
 load "$PROM/functions/load_cfadColors.ncl"
 load "$prom_root/functions/read_emvorado_pol.ncl"
 
-function read_cfad(cdiri,cens)
+function read_cfad(cdiri,copt)
 begin
+ cens = copt@nens
  nc = dimsizes(cens)
  do nf = 0, nc-1
-   fname  = cdiri + "/cfad_" + cens(nf) + ".nc"
+   fname  = cdiri + "/" + copt@prefx + cens(nf) + ".nc"
    nc_fil = addfile(fname + ".nc","r")
    var    = nc_fil->Band1
    if (nf.eq.0) then
@@ -52,10 +53,10 @@ begin
  ;User Settings ---------------------------------------------------------------
  pid         = 3 
  lnd         = "HET"
- itype       = "ART_GS"
- inst        = 6 
- opt         = True
- wks_type     = "x11"
+ itype       = "ART_SP4" ;"ART"
+ ;inst        = 6 
+ opt         = False ;True
+ wks_type     = "png"
 ;;
  casenames   = (/"bonnRadar_20150705"/)
  pnames      = (/"PROM1","PROM2","PROM3","EMPA2_PROM1"/)
@@ -74,19 +75,12 @@ begin
  ;diri_cosmo  = "/daten04/pshrestha/shared-data/" + casename + "/" + expname + "/" + sfold
  diri_emvo   = "/daten/daten04/pshrestha/shared-data/test-emvo/" + pname + "/" + lnd + "/" + sfold
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
- 
- ;JUWELS
- diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent 
-
- print("CPS hardwiring ")
- itype_gscp  = "HETART"
- sfold       = "runE_" + inst + "_" + itype_gscp
- expname     = lnd + "_" + pname
- subevent    = expname + "/" + itype_gscp + "/" + sfold
-
 
  diri_spath  = "/p/largedata/hbn33/storm_mask/" + expname + "/" + itype_gscp + "/nc/"
- diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent 
+ diri_cosmo  = "/p/largedata/hbn33/shrestha1/" + subevent
+ 
+ ;JUWELS
+ diri_emvo   = "/p/largedata/hbn33/test-emvo/" + subevent
 ;
 
 ;Read netcdf files
@@ -171,19 +165,21 @@ begin
 
   end do
   
-  ;foutname = "cfad_" + pname + "_" + expname + "_" + inst + ".nc"
-  ;system("rm " + foutname)
-  ;fout = addfile(foutname,"c")
-  ;fout->Band1 = varh
+  foutname = "cfad_" + expname + "_" + itype_gscp + "_" + inst + ".nc"
+  system("rm " + foutname)
+  fout = addfile(foutname,"c")
+  fout->Band1 = varh
 
   var = varh
   delete(varh)
 
  else
-
-   diri = "./"
-   nens = 0
-   varh =  read_cfad(diri,nens)
+   print("Generating ensemble CFAD")
+   diri = "$PROM/scratch/data_CFAD/"
+   fopt = True
+   fopt@prefx = "cfad_" + expname + "_" + itype_gscp + "_"
+   fopt@nens = (/5,6,7,8,9/) 
+   var = read_cfad(diri,fopt)
 
  end if
 
@@ -240,6 +236,8 @@ begin
  rho_cfad = cfads(var&Z,cvar,minv(vid),maxv(vid),binw(vid),pvars(vid),punits(vid),copt@YH95)
 
  ;Debug outputpfile
+ fdebug = True ;False
+ if (fdebug) then
  foutname = "CFAD_ZH_" + pname + "_" + sfold + ".nc"
  system("rm " + foutname)
  fout = addfile(foutname,"c")
@@ -256,12 +254,17 @@ begin
  system("rm " + foutname)
  fout = addfile(foutname,"c")
  fout->Band1 = rho_cfad
+ end if
 
 ;Plot
 ;---------------------------------------------------------------------------
  plot = new(4,"graphic")
 
- fname_out = "cfad_model_" + pname + "_" + sfold + "_" + inst
+ if (opt) then
+   fname_out = "cfad_model_" + pname + "_" + sfold + "_" + inst
+ else
+   fname_out = "cfad_model_" + pname + "_" + itype_gscp + "_ensemble"
+ end if
 
  wks = gsn_open_wks(wks_type,fname_out)
  colors =(/"white","black","white","gray30","gray40","gray50","gray61","gray75", \
@@ -401,7 +404,7 @@ begin
  txres@txFontHeightF = 0.015                    ; text font height
  txres@txJust        = "CenterLeft"              ; Default is "CenterCenter".
 
- gsn_text_ndc(wks,"b)",.01,.67,txres)
+ gsn_text_ndc(wks,"c)",.01,.67,txres)
 
 
  resP = True

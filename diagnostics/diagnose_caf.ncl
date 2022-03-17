@@ -1,7 +1,9 @@
-;
+;Compares model ensemble members with BoxPol and JuXPol
+
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 
 ;Diagnostic plots of ensemble CAF
 
@@ -36,7 +38,7 @@ begin
   opt@nt    = 5    ;data interval , mins
   opt@sthr  = 14   ;start hour
   opt@lnd   = "HET"
-  opt@itype = "ART"
+  opt@itype = "ART_SP4"
   opt@pname = "EMPA2_PROM1"
 
   opt@ver = 2 
@@ -63,90 +65,122 @@ begin
 ;  dpats  = (/0,0,0,0,0,0,0,0,0/) ;, \
 ;            ; 0,0,0,0,0,0,0,0,0, \
 ;            ; 0,0,0,0,0,0,0,0,0/)
-  dpats  = (/0,0,0,2,2,2,3,3,3/)
+;  dpats  = (/0,0,0,2,2,2,3,3,3/)
 ;  lnds   = (/"HET","HET","HET","HET","HET","HET","HET","HET","HET"/) ;, \
 ;            ;   "RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD","RHD", \
 ;             ;     "EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD","EHD"/)
 ;
 
-   einst = (/5,6,7,8,9/)
-   itypes = (/"ART","ART_HC","ART_BD"/)
-   colors = (/"red","blue","green"/)
-  nprf  = dimsizes(itypes)
-;  nprf = dimsizes(einst) 
-  data = new((/nprf,ndim/),"float")
+  einst   = (/5,6,7,8,9/)
+  colors  = (/"lightpink3","lightpink3","lightpink3","lightpink3","lightpink3"/)
+  dpats   = (/1,0,1,1,1/)
+  nprf    = dimsizes(einst) 
+  data    = new((/nprf,ndim/),"float")
 
   do ip = 0, nprf-1
-    opt@itype = itypes(ip)
-   ; opt@lnd = lnds(ip)
-   ; opt@inst = einst(ip)
-   ;opt@pname = pnames(ip)
+    ;opt@itype = itypes(ip)
+    ;opt@lnd = lnds(ip)
+    opt@inst = einst(ip)
+    ;opt@pname = pnames(ip)
     data(ip,:) = data_extract(diri2 ,opt)
   end do
-  ;opt@ver = 1
-  ;data2 = data_extract(diri1 ,opt)
 
-
+; Plot
+  fncps_no = 21
+  fncps_hgt = 0.028
   wks_type = "x11"
-  fname_out = "Figure_caf_revised"
+  fname_out = "Figure_caf_" + opt@lnd + "_" + opt@itype + "_" + opt@pname
   wks = gsn_open_wks(wks_type,fname_out)
 
   res = True
+
+  ;gsn Resources
   res@gsnDraw = False
   res@gsnFrame = False
 
+  ;tm Resources
+  res@tmXBLabelFont              = fncps_no
+  res@tmYLLabelFont              = fncps_no
+  res@tmYLLabelFontHeightF       = fncps_hgt
+  res@tmXBLabelFontHeightF       = fncps_hgt
+  res@tmYROn                     = False
+  res@tmXTOn                     = False
+  res@tmXBLabelFontColor         = "black"
+  res@tmYLLabelFontColor         = "black"
+  res@tmXBLabelFontThicknessF    = 2.0
+  res@tmYLLabelFontThicknessF    = 2.0
+
+  ;ti Resources
+  res@tiXAxisFont                = fncps_no
+  res@tiYAxisFont                = fncps_no
+  res@tiXAxisFontHeightF         = fncps_hgt
+  res@tiYAxisFontHeightF         = fncps_hgt
+  res@tiYAxisString              = "Convective Area Fraction [-]"
+  res@tiXAxisString              = "Time (UTC)"
+
+  ;xy Resources
+  res@xyDashPattern = 0
   res@xyLineThicknessF           = 3.
   res@xyLineColors  = colors
   res@xyDashPatterns = dpats
 
-  res@xyDashPattern = 0
-  res@xyLineColor = "lightpink3"
-  res@tiYAxisString              = "Convective Area Fraction [-]"
-  res@tiXAxisString              = "Time (UTC)"
-
+  ;vp Resources
   res@vpWidthF = 0.7
   res@vpHeightF = 0.5
-
-  res@tmXTOn  = False
-  res@tmYROn  = False
-
-  res@trYMaxF  = 0.6
-  res@trXMaxF  = 16.5
   res@vpWidthF = 0.7
 
-  data_avg = dim_avg_n(data,0)
+  ;tr Resources
+  res@trYMaxF  = 0.6
+  res@trXMaxF  = 16.5
+  
+  ;Time Labels 
+  restick = True
+  restick@ttmFormat = "%H%M"
+  time_axis_labels(data&time,res,restick) ;
 
   plot                        = gsn_csm_xy (wks,data&time,data,res) ; create plot
 
-; Obs
+; Observations
  delete(res@xyLineColors)
-   ; Obs
- delete(res@xyLineColors)
- res@xyLineColor = "black"
- dum_avg = gsn_csm_xy (wks,data&time,data_avg,res)
-  overlay(plot,dum_avg)
-
  res@xyLineColor                = "black"
+ res@xyDashPatterns = dpats*0
  dum1      = gsn_csm_xy (wks,tobs1,data1,res) ; create plot
  res@xyLineColor                = "black"
- res@xyDashPattern = 1
+ res@xyDashPatterns = dpats*0 + 1 
  dum2      = gsn_csm_xy (wks,tobs2,data2,res) ; create plot
 
  overlay(plot,dum1)
  overlay(plot,dum2)
 
-;  
+; Bars for CFADS 
   xval = (/15.5,15.5/)
   yval = (/0, 1.0/)
   gres = True
+  gres@gsLineColor = "grey20"
   duml1 = gsn_add_polyline(wks,plot,xval,yval,gres)
   xval = (/14.+45./60.,14. + 45./60./)
   yval = (/0, 1.0/)
   gres = True
   duml2 = gsn_add_polyline(wks,plot,xval,yval,gres)
 
+;Add legend
+ lgres                    = True
+ lgres@lgLineColors       = (/"black","black","lightpink3"/) 
+ lgres@lgLineThicknessF   = (/3.,3.,3./)
+ lgres@lgDashIndexes      = (/0,1,0/)
+ lgres@lgItemType         = "Lines"
+ lgres@lgLabelFontHeightF = .3
+ lgres@vpWidthF           = 0.13
+ lgres@vpHeightF          = 0.13
+ lgres@lgPerimOn          = False
+ lbid = gsn_create_legend(wks,3,(/"BoXPol","JuXPol","Model"/),lgres)
 
-  draw(plot)
-  frame(wks)
+ amres = True
+ amres@amParallelPosF   = 0.25
+ amres@amOrthogonalPosF = -0.35
+ annoid1 = gsn_add_annotation(plot,lbid,amres)
+
+ draw(plot)
+ frame(wks)
 
 end
