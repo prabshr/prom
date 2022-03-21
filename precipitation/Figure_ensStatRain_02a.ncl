@@ -7,7 +7,9 @@ begin
 ;fenscolor =True gives different colors to each ensemble members
 ;nes,and nee represents the start and end of ensemble members for each itype_gscp
 
- prom = "EMPA2_prom" + expid
+ expid = 2    ;prom 1, 2, 3
+ ;prom = "EMPA2_prom" + expid
+ diri_rain = "./nc_precipSensitivity_prom" + expid + "/" 
 
  ;lcov       = "CASE I :  20150704 0300 - 20150706 0000"
 ; itype_gscp = (/"HET2483","HET2563","HET2683","TGR2483","TGR2563","RADOLAN"/)
@@ -16,13 +18,17 @@ begin
 ; itype_gscp = (/"HET2483","HET2563","HET2683","RADOLAN"/)
 
 ; itype_gscp = (/"HETART","HETART_BD","HETART_HC","HETART_1n1m","HETART_SP4","RADOLAN"/)
- itype_gscp = (/"HETART","HETART_SP4","RADOLAN"/)
- colors     = (/"red", "green", "blue", "orange", "violet", "black"/)
-
-; itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
-;                "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
-;                "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
-;                "RADOLAN"/)
+; itype_gscp = (/"HETART","RADOLAN"/)
+; colors     = (/"red", "green", "blue", "orange", "violet", "black"/)
+  colors     = (/"blue","blue","blue","blue","blue","blue","blue","blue","blue", \
+                "red","red","red","red","red","red","red","red","red", \
+                "green","green","green","green","green","green","green","green","green", \
+                "black"/)
+;  itype_gscp  = (/"HET2493","EHD2493","RHD2493","RADOLAN"/)
+  itype_gscp = (/"HET2483","HET2463","HET2493","HET2583","HET2563","HET2593","HET2683","HET2663","HET2693", \
+                 "EHD2483","EHD2463","EHD2493","EHD2583","EHD2563","EHD2593","EHD2683","EHD2663","EHD2693", \
+                 "RHD2483","RHD2463","RHD2493","RHD2583","RHD2563","RHD2593","RHD2683","RHD2663","RHD2693", \
+                "RADOLAN"/)
  nes        = 5 ;0 
  nee        = 9 ;19 
  fenscolor  = False
@@ -110,8 +116,9 @@ begin
    else
    end if
 
+   ;PROM3 tinst = (/7,9,14,16,19/)
    do nf  = nes,nee ;0, nens-1                   ;EPS Loop
-     filname    = "data_" + prom + "/accprecip_" + itype_gscp(ityp) + "_" + nf + ".nc"
+     filname    = diri_rain + "/accprecip_" + itype_gscp(ityp) + "_" + nf + ".nc"
      fout       = addfile(filname,"r")
      pvar       = fout->ACCRAIN
      pvar1d     = pdfx(ndtooned(pvar),nbin,opt) 
@@ -184,7 +191,6 @@ begin
  ires@gsnXYBarChart = True            ; Create bar plot
  ires@gsnYRefLine    = 0
  ires@gsnXYBarChartColors = barcolors; 
- print(barcolors)
 
  ires@trYMinF = 0.
  ires@trYMaxF = 20.
@@ -212,6 +218,11 @@ begin
 
  draw(plot)
  frame(wks)
+
+ ;Now look at variability
+ savg = avg(pstat(1,0:nmax-2))
+ print("Average precipitation for all experiments " + savg)
+ print("Radola average precipitation " + pstat(1,nmax-1))
 
 end
 

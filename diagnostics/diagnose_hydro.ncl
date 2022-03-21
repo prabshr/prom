@@ -20,6 +20,8 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/time_axis_labels.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/calendar_decode2.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+load "$prom_root/functions/rootCLM.ncl"
+load "$prom_root/functions/pdfRootMoisture.ncl"
 
 begin
 
@@ -28,16 +30,26 @@ begin
 ;-----------------------------------------------------------------------------------------
 
 ;;MODEL OUTPUT
- lnd         = "RHD"
+ lnd         = "HET"
  inst        = 6
- ;itype       = 2483
- itype_gscp  = lnd + tostring(itype) ;"HET2483"
- diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
- subevent    = "runE_" + inst + "_" + itype_gscp
+ ;itype      = 2483
+ pid         = 1 
 
- diri_cosI    = diri + "/" + itype_gscp + "/" + subevent + "/cosout/ivr/"
- diri_clm    = diri + "/" + itype_gscp + "/" + subevent + "/clmout/"
- diri_pfl    = diri + "/" + itype_gscp + "/" + subevent + "/pflout/"
+ pnames      = (/"PROM1","PROM2","PROM3"/)
+ years       = (/2015,2016,2017/)
+ cnames      = (/"bonnRadar_20150705"/)
+
+ itype_gscp  = lnd + itype
+ sfold       = "runE_" + inst + "_" + itype_gscp
+ pname       = pnames(pid)
+ expname     = lnd + "_" + pname
+ subevent    = expname + "/" + itype_gscp + "/" + sfold
+
+ ;CLUMA2
+ diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+ ;JUWELS
+ diri        = "/p/largedata/hbn33/shrestha1/"
+ diri_s      = "/p/project/terrsysmp-art/database/bonnRadar/clm/"
 
  ;Bonn Radar
  glon_id = (/7.071663, 7.00/) ;
@@ -45,18 +57,37 @@ begin
  gmarker = (/10,9/)
 
  fplot   = False
- ;fnctr   = 15
+ fstat   = True
 ;-----------------------------------------------------------------------------------------
 ; READ COSMO GRIDS
 ;-------------------------------------------------------------------------------------
- nbdl     = 3
+
+ diri_cosI   = diri + "/" + subevent + "/cosout/ivr/"
+ diri_clm    = diri + "/" + subevent + "/clmout/"
+ diri_pfl    = diri + "/" + subevent + "/pflout/"
+
+ nbdl     = 3 + 17  ;exclude boundaries and relaxation zone
+
  nc_cosI  = addfile(diri_cosI +"lfff00000000c.nc","r")
  lat      = nc_cosI->lat
  lon      = nc_cosI->lon
  ndim     = dimsizes(lat)
  lat2d    = lat(nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
  lon2d    = lon(nbdl:ndim(0)-nbdl-1,nbdl:ndim(1)-nbdl-1)
+ delete(ndim)
  ndimc    = dimsizes(lat2d)
+ ny       = ndimc(0)
+ nx       = ndimc(1)
+ 
+;-----------------------------------------------------------------------------------------
+; READ CLM SURFACE FILES
+;-----------------------------------------------------------------------------------------
+ nbdl      = 17   ;already the cmpt bdry are cropped
+ fsurfil   = diri_s + "/surfdata_" + lnd + years(pid) + "_0294x0294.nc"
+ fils_clm  = systemfunc("ls " + diri_clm + "clmoas*")
+ fclmfil   = fils_clm(0)
+ rootfr    = rootCLM(fsurfil,fclmfil,nbdl)
+ ndimr     = dimsizes(rootfr)
 
 ;-----------------------------------------------------------------------------------------
 ; READ NC FILES 
@@ -69,46 +100,62 @@ begin
  tim_clm    = ncdf_clm[:]->time
  shf        = (ncdf_clm[:]->FSH_V) + (ncdf_clm[:]->FSH_G)
  lhf        = (ncdf_clm[:]->FCTR) + (ncdf_clm[:]->FGEV) + (ncdf_clm[:]->FCEV)
- fsds       = (ncdf_clm[:]->FSDS)
- flds       = (ncdf_clm[:]->FLDS)
+ fsa        = (ncdf_clm[:]->FSA)
+ flw        = (ncdf_clm[:]->FIRA)
+ fgr        = (ncdf_clm[:]->FGR)
+ theta_root = pdfRootMoisture(fils_clm,nbdl,rootfr)
 
- hrs        = tointeger(cd_string(tim_clm,"%H")) 
- days       = tointeger(cd_string(tim_clm,"%D")) 
+ ;Net Energy Balance
+ ;fgr       = (fsa-flw) - (shf + lhf)
+ system("rm temp.nc")
+ fout = addfile("temp.nc","c")
+ fout->Band1 = fsa-flw
+ delete(fout)
 
- ind_avg    = ind(hrs.ge.6 .and. hrs.le.17 .and. days.eq.4)
+ if (fstat) then
+   hrs        = tointeger(cd_string(tim_clm,"%H")) 
+   days       = tointeger(cd_string(tim_clm,"%D")) 
 
- shf_avg    = dim_avg_n(shf(ind_avg,:,:),0)
- shf_avg@lat2d  = lat2d
- shf_avg@lon2d  = lon2d
- shf_avg@long_name  = "H"
+   ind_avg    = ind(hrs.ge.9 .and. hrs.le.16)
 
- lhf_avg    = dim_avg_n(lhf(ind_avg,:,:),0)
- lhf_avg@lat2d  = lat2d
- lhf_avg@lon2d  = lon2d 
- lhf_avg@long_name = "LE"
+   shf_avg    = dim_avg_n(shf(ind_avg,:,:),0)
+   shf_avg@lat2d  = lat2d
+   shf_avg@lon2d  = lon2d
+   shf_avg@long_name  = "H"
 
- br_avg    = shf_avg/lhf_avg
- br_avg@lat2d  = lat2d
- br_avg@lon2d  = lon2d
- br_avg@long_name = "BR"
+   lhf_avg    = dim_avg_n(lhf(ind_avg,:,:),0)
+   lhf_avg@lat2d  = lat2d
+   lhf_avg@lon2d  = lon2d 
+   lhf_avg@long_name = "LE"
 
- br1   = avg(br_avg)
- br2   = stddev(br_avg)
- tur1   = avg(shf_avg+lhf_avg)
- tur2   = stddev(shf_avg+lhf_avg)
- print("Bowen Ratio :" + br1 + "+-" + br2)
- print("Total turbulent Flux: " + tur1 + "+-1" + tur2)
+   br_avg    = shf_avg/lhf_avg
+   br_avg@lat2d  = lat2d
+   br_avg@lon2d  = lon2d
+   br_avg@long_name = "BR"
+
+   br1   = avg(br_avg)
+   br2   = stddev(br_avg)
+
+   turf   = lhf(ind_avg,:,:) + shf(ind_avg,:,:)
+   turfa  = dim_avg_n(turf,0) 
+   tur1   = avg(turfa)
+   tur2   = stddev(turfa)
+
+   print("Statistics for data from 7 to 14 UTC ")
+   print("Bowen Ratio, Mean: " + br1 + " s.d. :" + br2)
+   print("Total avg. turbulent Flux, Mean: " + tur1 + " s.d. :" + tur2)
+
+ end if
 
  ;Debug Output file
- fname = "flx_" + itype_gscp + "_" + inst + ".nc"
+ fname = "hydro_" + pname + "_" + itype_gscp + "_" + inst + ".nc"
  system("rm " + fname)
- fout = addfile(fname,"c")
+ fout       = addfile(fname,"c")
  fout->time = tim_clm
  fout->H    =  dim_avg_n(dim_avg_n(shf,2),1)
  fout->LE   =  dim_avg_n(dim_avg_n(lhf,2),1) 
- fout->Hpat = shf_avg
- fout->LEpat = lhf_avg
- ;
+ fout->NETR =  dim_avg_n(dim_avg_n(fsa-flw,2),1)
+ fout->SR   =  dim_avg_n(dim_avg_n(theta_root,2),1)
 
  if (fplot) then
 

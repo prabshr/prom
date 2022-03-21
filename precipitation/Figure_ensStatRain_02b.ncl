@@ -30,11 +30,12 @@ begin
  nfs = 5 ;0
  nfe = 9 ;19
  plotRADOLAN = True ;False
- diriR       = "/daten01/z4/database/radola/"  ;RADOLAN data
- diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_EMPA2_prom1/" 
+ ;diriR       = "/daten01/z4/database/radola/"  ;RADOLAN data
+ ;diriR       = "/p/home/jusers/shrestha1/juwels/Scripts/prom/precipitation/data_EMPA2_prom1/" 
  fstat       = 1
- diri        = "./data_EMPA2_prom" + expid
- prefx       = "accprecip_HETART_SP4"
+ diriR        = "$HOME/Scripts/scratch_prom/data_EMPA2_prom" + expid
+ diriR       = "./nc_precipSensitivity_promART" + expid 
+ prefx       = "accprecip_HETART"
 
  ;Bonn Radar
  glon_id = (/7.071663/) ;, 7.098308/) ;
@@ -50,10 +51,10 @@ begin
  end if
 
  do nf  = nfs,nfe ;0, nfils-1                   ;EPS Loop
-   fname      = diri + "/" + prefx+ "_"+nf+".nc"
+   fname      = diriR + "/" + prefx+ "_"+nf+".nc"
    fout       = addfile(fname,"r")
    if (nf.eq.nfs) then
-     fgeo       = addfile(diri + "/georain.nc","r")
+     fgeo       = addfile(diriR + "/georain.nc","r")
      topo       = (/fgeo->topo/)
      lat2d      = fgeo->lat2d
      lon2d      = fgeo->lon2d

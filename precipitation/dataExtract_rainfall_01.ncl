@@ -33,13 +33,16 @@ begin
 ; USER SETTINGS
 ;-----------------------------------------------------------------------------------------
  ;expid= 1,2,3   ;for RADOLAN
- pname = "EMPA2_PROM1";
- lnd   = "HET"
- itype = "ART_TURSP4"
+ pname = "PROM3";
+ lnd   = "RHD"
+; itype = "ART"
  itype_gscp  = lnd + itype
- ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20150705"
+ ;CLUMA2
+ expname     = "bonnRadar_20150705"
+ diri        = "/daten04/pshrestha/shared-data/"
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20160513"
  ; diri        = "/daten04/pshrestha/shared-data/bonnRadar_20170706"
+ diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
  ;JUWELS
  diri      = "/p/largedata/hbn33/shrestha1/"
  diri_spath  = "/daten/daten04/pshrestha/shared-data/storm_mask/nc"
@@ -58,7 +61,8 @@ begin
  varname = "TOT_PREC" ;
  cnLevels = (/1,5,10,15,20,25,30,40,50,60/)
 
- do inst = 6,6 ;0,19    ;ENS LOOP
+;PROM 3 tinst = (/7,11,14,16,19/)
+ do inst = 5,9    ;ENS LOOP
 
  ;;MODEL OUTPUT
  sfold       = "runE_" + inst + "_" + itype_gscp 
